@@ -435,7 +435,8 @@
             grid: {}, 
             entities: [],
             unlockedTracks: ['theme.mp3'],
-            currentTrack: 'theme.mp3'
+            currentTrack: 'theme.mp3',
+            isMuted: false
         };
 
         let currentTool = 'cursor';
@@ -468,6 +469,27 @@
             }
             
             document.getElementById('btn-cost-ampliar').innerText = `${state.expandCost.toLocaleString()} 💰`;
+            
+            // --- NOU: Restaurar l'estat del silenciador i reproduir automàticament ---
+            isMuted = state.isMuted === true;
+            audioEl.muted = isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+            
+            audioEl.src = state.currentTrack;
+            let playPromise = audioEl.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                    // Si el navegador bloqueja l'autoplay, forcem que s'engegui al primer clic
+                    const startAudio = () => {
+                        audioEl.play().catch(err => {});
+                        document.removeEventListener('click', startAudio);
+                        document.removeEventListener('touchstart', startAudio);
+                    };
+                    document.addEventListener('click', startAudio);
+                    document.addEventListener('touchstart', startAudio);
+                });
+            }
+            // -------------------------------------------------------------------------
             
             renderGrid();
             setupControls();
@@ -822,6 +844,10 @@
             isMuted = !isMuted;
             audioEl.muted = isMuted;
             document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+            
+            // Guardar l'estat per recordar-ho al tornar a entrar
+            state.isMuted = isMuted;
+            saveGame();
         }
 
         // --- SISTEMA DE MÚSICA ---
