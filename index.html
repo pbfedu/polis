@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POLIS - La Ciutat Platònica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(255, 255, 255, 0.92);
+            --bronze: #cd7f32;
+            --silver: #c0c0c0;
+            --gold: #ffd700;
+            --text-main: #1e293b;
+            --tile-size: 60px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--text-main);
+            overflow: hidden;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1, h2, h3, .cinzel { font-family: 'Cinzel', serif; }
+
+        /* Paneles UI */
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+            border-radius: 12px;
+        }
+
+        /* Mapa y Grid */
+        #map-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            background: #090d16;
+        }
+        #map-container:active { cursor: grabbing; }
+
+        #map-wrapper {
+            position: absolute;
+            transform-origin: top left;
+            transition: transform 0.2s ease-out; /* Smooth Zoom/Pan */
+        }
+
+        #map {
+            position: relative;
+            background-color: #4ade80;
+            background-image: radial-gradient(#22c55e 2px, transparent 2px);
+            background-size: 30px 30px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #16a34a;
+        }
+
+        .cell {
+            position: absolute;
+            width: var(--tile-size);
+            height: var(--tile-size);
+            background-color: rgba(134, 239, 172, 0.35);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            user-select: none;
+            border-radius: 4px;
+        }
+        .cell:hover {
+            background-color: rgba(187, 247, 208, 0.8);
+            z-index: 10;
+        }
+
+        /* --- NOVES CAPES PER EVITAR BUGS --- */
+        #grid-layer, #entity-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #entity-layer {
+            pointer-events: none; /* Deixa passar clics al fons, però les entitats capturen els seus */
+            z-index: 20;
+        }
+
+        /* Entidades animadas suavemente */
+        .entity {
+            position: absolute;
+            width: var(--tile-size);
+            height: var(--tile-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            pointer-events: auto;
+            cursor: pointer;
+            /* Animación fluida "chill" */
+            transition: transform 0.8s linear, opacity 0.3s;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .entity:hover {
+            z-index: 60;
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+        }
+
+        /* Colors per distingir classes (Poble, Guardians, Invasors, Filòsofs) */
+        .entity.bronze { background-color: #ffedd5; border: 2px solid #ea580c; }
+        .entity.plata { background-color: #f1f5f9; border: 2px solid #64748b; }
+        .entity.or { background-color: #fef08a; border: 2px solid #ca8a04; }
+        .entity.atacant { background-color: #fee2e2; border: 2px solid #dc2626; }
+
+        /* Menú de construcción */
+        .build-btn {
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .build-btn:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+        .build-btn.selected { border-color: var(--gold); background-color: #fffbeb; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .notification {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        /* Modal Censo i Ajustos */
+        #cens-modal, #settings-modal {
+            display: none;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+        #cens-modal.active, #settings-modal.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header / HUD -->
+    <header class="glass-panel m-4 p-4 flex justify-between items-center z-20">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 tracking-wider cinzel">POLIS</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Beta Build</p>
+        </div>
+        
+        <div class="flex gap-4 items-center">
+            
+            <!-- NOU BOTÓ: Estudiar a l'Acadèmia -->
+            <a href="play.html" class="px-5 py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 shadow-md transition-colors cinzel whitespace-nowrap flex items-center gap-2 border border-yellow-500 mr-2">
+                <span class="text-xl">🎓</span> Estudiar a l'Acadèmia
+            </a>
+
+            <!-- Controls Zoom, Cens i Música -->
+            <div class="flex gap-2 mr-4 border-r pr-4 border-gray-200">
+                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl" onclick="adjustZoom(0.1)" title="Zoom In">➕</button>
+                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl" onclick="adjustZoom(-0.1)" title="Zoom Out">➖</button>
+                <button class="px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold text-sm ml-2" onclick="toggleCens()">📜 Cens</button>
+                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl ml-1" id="mute-btn" onclick="toggleMute()" title="Silenciar/Activar Música">🔊</button>
+                <button class="px-2 py-2 text-gray-500 hover:text-gray-800 rounded font-bold text-lg ml-1" onclick="toggleSettings()" title="Sistema ocult">⚙️</button>
+            </div>
+
+            <div class="text-center">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Tresoreria</p>
+                <p class="text-xl font-bold text-yellow-600" id="ui-money">100,000 💰</p>
+            </div>
+            
+            <div class="text-center px-4">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Felicitat</p>
+                <div class="w-32 h-3 bg-gray-200 rounded-full mt-2 overflow-hidden mx-auto">
+                    <div id="ui-happiness" class="h-full bg-green-500 transition-all duration-500" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Harmonia</p>
+                <div class="w-32 h-3 bg-gray-200 rounded-full mt-2 overflow-hidden mx-auto flex">
+                    <div id="ui-bar-bronze" class="h-full bg-orange-400 transition-all duration-500" title="Artesans (Desig)" style="width: 33.3%;"></div>
+                    <div id="ui-bar-silver" class="h-full bg-gray-400 transition-all duration-500" title="Guardians (Coratge)" style="width: 33.3%;"></div>
+                    <div id="ui-bar-gold" class="h-full bg-yellow-400 transition-all duration-500" title="Governants (Raó)" style="width: 33.3%;"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Left Sidebar: Constucció -->
+        <aside class="w-72 glass-panel m-4 mt-0 p-4 flex flex-col gap-2 z-20 overflow-y-auto">
+            <h2 class="text-lg cinzel font-bold text-gray-800 border-b pb-2 mb-2">Construcció</h2>
+            
+            <button class="build-btn selected p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('cursor')">
+                <span class="text-2xl">👆</span>
+                <div>
+                    <div class="font-bold text-sm">Inspeccionar</div>
+                </div>
+            </button>
+
+            <!-- Artesans -->
+            <p class="text-xs font-bold text-orange-600 mt-2">Bronze (Desig)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('botiga')">
+                <span class="text-2xl">🏠</span>
+                <div>
+                    <div class="font-bold text-sm">Botiga / Casa</div>
+                    <div class="text-xs text-gray-500">1,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('mercat')">
+                <span class="text-2xl">🛒</span>
+                <div>
+                    <div class="font-bold text-sm">Mercat Àgora</div>
+                    <div class="text-xs text-gray-500">3,000 💰 (Genera riquesa)</div>
+                </div>
+            </button>
+
+            <!-- Guardians -->
+            <p class="text-xs font-bold text-gray-500 mt-2">Plata (Coratge)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('quarter')">
+                <span class="text-2xl">🛡️</span>
+                <div>
+                    <div class="font-bold text-sm">Quarter</div>
+                    <div class="text-xs text-gray-500">2,500 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('entrenament')">
+                <span class="text-2xl">⚔️</span>
+                <div>
+                    <div class="font-bold text-sm">Zona d'Entrenament</div>
+                    <div class="text-xs text-gray-500">4,000 💰</div>
+                </div>
+            </button>
+
+            <!-- Governants -->
+            <p class="text-xs font-bold text-yellow-600 mt-2">Or (Raó)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('academia')">
+                <span class="text-2xl">📚</span>
+                <div>
+                    <div class="font-bold text-sm">Acadèmia</div>
+                    <div class="text-xs text-gray-500">5,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('ajuntament')">
+                <span class="text-2xl">🏛️</span>
+                <div>
+                    <div class="font-bold text-sm">Ajuntament</div>
+                    <div class="text-xs text-gray-500">15,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('temple')">
+                <span class="text-2xl">🏛️</span>
+                <div>
+                    <div class="font-bold text-sm">Temple de la Raó</div>
+                    <div class="text-xs text-gray-500">25,000 💰</div>
+                </div>
+            </button>
+
+            <!-- Deco -->
+            <p class="text-xs font-bold text-green-600 mt-2">Decoració</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('arbre')">
+                <span class="text-2xl">🌳</span><div><div class="font-bold text-sm">Arbre</div><div class="text-xs text-gray-500">100 💰</div></div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('estatua')">
+                <span class="text-2xl">🗿</span><div><div class="font-bold text-sm">Estàtua de Sòcrates</div><div class="text-xs text-gray-500">2,000 💰</div></div>
+            </button>
+
+            <!-- Enderrocar / Borrar -->
+            <p class="text-xs font-bold text-red-600 mt-2">Gestió d'Espai</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3 bg-red-50 hover:bg-red-100" onclick="selectTool('borrar')">
+                <span class="text-2xl">🧹</span>
+                <div>
+                    <div class="font-bold text-sm text-red-700">Enderrocar</div>
+                    <div class="text-xs text-red-500">Recuperes un 70% del valor</div>
+                </div>
+            </button>
+
+            <div class="mt-auto pt-4 border-t border-gray-200 space-y-2">
+                <button class="w-full p-2 bg-green-50 text-green-700 rounded text-sm font-bold hover:bg-green-100 flex justify-between" onclick="expandirPolis()">
+                    <span>🗺️ Ampliar Polis</span>
+                    <span id="btn-cost-ampliar">50,000 💰</span>
+                </button>
+                <button class="w-full p-2 bg-red-50 text-red-600 rounded text-sm font-bold hover:bg-red-100" onclick="resetGame()">🔥 Reiniciar Ciutat</button>
+            </div>
+        </aside>
+
+        <!-- Main Map Area -->
+        <main id="map-container">
+            <!-- Panell de Consells (Guia) -->
+            <div class="absolute top-4 left-4 glass-panel p-3 z-30 w-72 border-l-4 border-blue-500 text-sm shadow-md">
+                <h3 class="font-bold text-gray-800 mb-1">📢 Veu de l'Àgora</h3>
+                <p id="ui-consells" class="text-gray-600 italic">"La ciutat està en calma. Construeix botigues per generar dracmes."</p>
+            </div>
+
+            <div id="map-wrapper">
+                <div id="map">
+                    <div id="grid-layer"></div>
+                    <div id="entity-layer"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Inspector -->
+        <aside id="inspector-panel" class="w-72 glass-panel m-4 mt-0 p-5 flex flex-col z-20 hidden">
+            <div class="flex justify-between items-start mb-4 border-b pb-2">
+                <h2 class="text-xl cinzel font-bold text-gray-800" id="insp-title">Nom</h2>
+                <span class="text-3xl" id="insp-icon">❓</span>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase font-bold">Tipus / Ànima</p>
+                    <p class="text-sm font-medium text-gray-800" id="insp-type">Bronze</p>
+                </div>
+                
+                <div id="insp-mood-container">
+                    <p class="text-xs text-gray-500 uppercase font-bold">Estat d'Ànim</p>
+                    <p class="text-sm font-medium" id="insp-mood">Feliç</p>
+                </div>
+
+                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 italic text-sm text-gray-600 relative">
+                    <span class="absolute -top-2 -left-2 text-xl">💬</span>
+                    <p id="insp-thought">"Pensament..."</p>
+                </div>
+            </div>
+            <button class="mt-auto w-full p-2 bg-gray-100 text-gray-600 rounded text-sm hover:bg-gray-200" onclick="closeInspector()">Tancar</button>
+        </aside>
+
+    </div>
+
+    <!-- Feed de Notificacions -->
+    <div id="feed-container" class="absolute bottom-4 left-80 w-80 z-30 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modal Cens -->
+    <div id="cens-modal" class="fixed inset-0 z-50 justify-center items-center">
+        <div class="glass-panel w-3/4 max-w-2xl max-h-[80vh] flex flex-col p-6 rounded-xl shadow-2xl relative">
+            <button class="absolute top-4 right-4 text-gray-500 hover:text-black font-bold text-xl" onclick="toggleCens()">×</button>
+            <h2 class="text-2xl cinzel font-bold mb-4 border-b pb-2">Cens de Ciutadans</h2>
+            <div class="overflow-y-auto flex-1 pr-2 space-y-2" id="cens-list">
+                <!-- Lista se llena por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Settings (Menú Ocult) -->
+    <div id="settings-modal" class="fixed inset-0 z-50 justify-center items-center">
+        <div class="glass-panel w-96 flex flex-col p-6 rounded-xl shadow-2xl relative">
+            <button class="absolute top-4 right-4 text-gray-500 hover:text-black font-bold text-xl" onclick="toggleSettings()">×</button>
+            <h2 class="text-xl cinzel font-bold mb-3 border-b pb-2">Opcions i Música 🎵</h2>
+            
+            <!-- Hilo Musical / Fil Musical -->
+            <div class="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <h3 class="font-bold text-sm text-yellow-800 mb-2">Fil Musical de la Polis</h3>
+                <div class="space-y-2 text-xs" id="music-list">
+                    <!-- Se llena por JS -->
+                </div>
+            </div>
+
+            <h3 class="font-bold text-sm text-gray-700 mb-2 border-b pb-1">Còpia de Seguretat</h3>
+            <p class="text-sm text-gray-600 mb-4">Guarda o restaura la teva Polis de manera segura. Aquest fitxer encriptat conté els ciutadans i l'or.</p>
+            <div class="space-y-3">
+                <button class="w-full p-2 bg-blue-100 text-blue-700 font-bold rounded hover:bg-blue-200" onclick="exportBackup()">📥 Descarregar Fitxer (.polis)</button>
+                <div class="relative w-full">
+                    <input type="file" id="import-file" class="hidden" accept=".polis" onchange="importBackup(event)">
+                    <button class="w-full p-2 bg-gray-100 text-gray-700 font-bold rounded hover:bg-gray-200 border border-gray-300" onclick="document.getElementById('import-file').click()">📤 Pujar Fitxer (.polis)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Element Ocult -->
+    <audio id="bg-music" loop></audio>
+
+    <script>
+        // --- CONFIGURACIÓ I CONSTANTS ---
+        const TILE_SIZE = 60;
+        const NOMS = ["Marc", "Laia", "Jordi", "Montserrat", "Pol", "Alba", "Pau", "Núria", "Joan", "Marta", "Sòcrates", "Plató", "Aristòtil", "Pèricles", "Homer", "Aspàsia", "Hipàtia", "Alexandre", "Diògenes", "Epicur", "Zenó", "Tales", "Pitàgores", "Heròdot", "Safo", "Teseu", "Gàl·lia", "Helena", "Atenea"];
+        const OFICIS = ["Fusteria", "Forn de pa", "Sabateria", "Ferreria", "Taverna", "Cistelleria", "Taller de ceràmica", "Escultor", "Pintor", "Poeta", "Músic", "Pescador", "Pagès", "Astrònom", "Metge", "Arquitecte", "Teixidor", "Comerciant de Vi"];
+        const EDIFICIS = {
+            'botiga': { cost: 1000, icon: '🏠', type: 'bronze', name: 'Casa/Botiga' },
+            'mercat': { cost: 3000, icon: '🛒', type: 'bronze', name: 'Mercat de l\'Àgora' },
+            'quarter': { cost: 2500, icon: '🛡️', type: 'silver', name: 'Quarter' },
+            'entrenament': { cost: 4000, icon: '⚔️', type: 'silver', name: 'Zona d\'Entrenament' },
+            'academia': { cost: 5000, icon: '📚', type: 'gold', name: 'Acadèmia' },
+            'ajuntament': { cost: 15000, icon: '🏛️', type: 'gold', name: 'Ajuntament' },
+            'temple': { cost: 25000, icon: '🏛️', type: 'gold', name: 'Temple de la Raó' },
+            'arbre': { cost: 100, icon: '🌳', type: 'deco', name: 'Arbre' },
+            'estatua': { cost: 2000, icon: '🗿', type: 'deco', name: 'Estàtua Filosòfica' }
+        };
+
+        const MUSICA = [
+            { id: 'theme.mp3', title: '🎵 Himne de la Polis (Default)', cost: 0, unlocked: true },
+            { id: 'theme2.mp3', title: '📜 Harmonia d\'Atenes', cost: 5000, unlocked: false },
+            { id: 'theme3.mp3', title: '🏛️ Les Dunes', cost: 12000, unlocked: false },
+            { id: 'theme4.mp3', title: '🛡️ Marxa dels Guardians', cost: 25000, unlocked: false }
+        ];
+
+        // --- ESTAT DEL JOC ---
+        let state = {
+            money: 100000,
+            happiness: 100,
+            gridSize: 15,
+            expandCost: 50000,
+            grid: {}, 
+            entities: [],
+            unlockedTracks: ['theme.mp3'],
+            currentTrack: 'theme.mp3'
+        };
+
+        let currentTool = 'cursor';
+        let zoom = 1.0;
+        let mapOffsetX = 0, mapOffsetY = 0;
+        let isDragging = false, startDragX = 0, startDragY = 0;
+        let isClicking = false;
+        let adviceCooldown = 0;
+        let isMuted = false;
+        const audioEl = document.getElementById('bg-music');
+
+        // --- ELEMENTS DOM ---
+        const mapEl = document.getElementById('map');
+        const gridLayer = document.getElementById('grid-layer');
+        const entityLayer = document.getElementById('entity-layer');
+        const mapWrapper = document.getElementById('map-wrapper');
+        const mapContainer = document.getElementById('map-container');
+        const inspectorPanel = document.getElementById('inspector-panel');
+        const feedContainer = document.getElementById('feed-container');
+
+        // --- INICIALITZACIÓ ---
+        function init() {
+            loadGame();
+            if (Object.keys(state.grid).length === 0) {
+                // Estat inicial: 2 botigues prop del centre
+                let cx = Math.floor(state.gridSize/2);
+                generarBotigaInicial(cx, cx);
+                generarBotigaInicial(cx + 2, cx);
+                saveGame();
+            }
+            
+            document.getElementById('btn-cost-ampliar').innerText = `${state.expandCost.toLocaleString()} 💰`;
+            
+            renderGrid();
+            setupControls();
+            updateUI();
+            
+            setInterval(gameTick, 1000);
+            requestAnimationFrame(renderEntitiesVisuals);
+            
+            addNotification("🌟 Benvingut a la teva Polis, Governant.");
+        }
+
+        function generarBotigaInicial(x, y) {
+            const lletra = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // Lletra A-Z
+            const nom = NOMS[Math.floor(Math.random() * NOMS.length)] + " " + lletra + ".";
+            const ofici = OFICIS[Math.floor(Math.random() * OFICIS.length)];
+            state.grid[`${x},${y}`] = { 
+                type: 'botiga', icon: '🏠', name: `${ofici} d'en/na ${nom}`, owner: nom, soul: 'Classe: Artesà/Productor' 
+            };
+            spawnEntity('aldea', x, y, nom);
+        }
+
+        function spawnEntity(type, x, y, nom = null) {
+            let icon = '👨‍🌾';
+            let classeC = 'bronze';
+            if(type === 'guardia') { icon = '💂'; classeC = 'plata'; }
+            if(type === 'atacant') { icon = '👾'; classeC = 'atacant'; }
+            if(type === 'filosof') { icon = '📜'; classeC = 'or'; }
+            
+            state.entities.push({
+                id: Math.random().toString(36).substring(7),
+                type: type,
+                classeCSS: classeC,
+                x: x, y: y,
+                homeX: x, homeY: y, // Per reaparèixer si es bugueja
+                targetX: x, targetY: y,
+                icon: icon,
+                nom: nom || (type==='guardia' ? 'Guardià' : (type==='filosof' ? 'Filòsof' : 'Invasor')),
+                thought: generarPensament(type),
+                action: 'Descansant'
+            });
+        }
+
+        function generarPensament(type) {
+            if(type === 'aldea') return ["La meva botiga prospera.", "Fa un bon dia a la polis.", "Necessitem més or!" , "La justícia platònica m'empara."][Math.floor(Math.random()*4)];
+            if(type === 'guardia') return ["Per l'honor de la Polis!", "Vigilant l'horitzó...", "Mensa sana in corpore sano."][Math.floor(Math.random()*3)];
+            if(type === 'atacant') return ["Destrucció!", "Porteu-me els vostres dracmes!"];
+            if(type === 'filosof') return ["L'home és la mesura de totes les coses.", "Pensa abans d'actuar.", "Contemplant les idees pures.", "Només sé que no sé res."][Math.floor(Math.random()*4)];
+            return "...";
+        }
+
+        // --- CONTROLS I CÀMERA ---
+        function adjustZoom(delta) {
+            zoom = Math.max(0.4, Math.min(2.0, zoom + delta));
+            updateCamera();
+        }
+
+        function updateCamera() {
+            mapWrapper.style.transform = `translate(${mapOffsetX}px, ${mapOffsetY}px) scale(${zoom})`;
+        }
+
+        function selectTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.build-btn').forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        function setupControls() {
+            mapContainer.addEventListener('mousedown', (e) => {
+                if(e.button !== 0) return;
+                isDragging = false;
+                isClicking = true;
+                startDragX = e.clientX - mapOffsetX;
+                startDragY = e.clientY - mapOffsetY;
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isClicking) return;
+                // Si es mou més de 5px, es considera Drag
+                if(Math.abs((e.clientX - mapOffsetX) - startDragX) > 5 || Math.abs((e.clientY - mapOffsetY) - startDragY) > 5) {
+                    isDragging = true;
+                }
+                if(isDragging) {
+                    mapOffsetX = e.clientX - startDragX;
+                    mapOffsetY = e.clientY - startDragY;
+                    updateCamera();
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                isClicking = false;
+                // isDragging es reseteja al handleCellClick/EntityClick per saber si s'ha de processar
+            });
+            
+            // Centrar inicial
+            mapOffsetX = (mapContainer.clientWidth - (state.gridSize * TILE_SIZE)) / 2;
+            mapOffsetY = (mapContainer.clientHeight - (state.gridSize * TILE_SIZE)) / 2;
+            updateCamera();
+        }
+
+        function renderGrid() {
+            gridLayer.innerHTML = '';
+            mapEl.style.width = `${state.gridSize * TILE_SIZE}px`;
+            mapEl.style.height = `${state.gridSize * TILE_SIZE}px`;
+
+            for (let y = 0; y < state.gridSize; y++) {
+                for (let x = 0; x < state.gridSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.style.left = `${x * TILE_SIZE}px`;
+                    cell.style.top = `${y * TILE_SIZE}px`;
+                    
+                    const clau = `${x},${y}`;
+                    if(state.grid[clau]) {
+                        cell.innerText = state.grid[clau].icon;
+                    }
+                    
+                    // Events de casella
+                    cell.addEventListener('mouseup', (e) => {
+                        if(isDragging) { isDragging = false; return; } // Ignorar si s'arrossegava
+                        handleCellClick(x, y);
+                    });
+                    gridLayer.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(x, y) {
+            const clau = `${x},${y}`;
+
+            if(currentTool === 'cursor') {
+                if(state.grid[clau]) showInspector(state.grid[clau]);
+                else closeInspector();
+                return;
+            }
+
+            // --- OPCIÓ BORRAR / ENDERROCAR ---
+            if(currentTool === 'borrar') {
+                if(!state.grid[clau]) {
+                    addNotification("❓ Aquí no hi ha cap edifici per enderrocar.");
+                    return;
+                }
+                const bData = state.grid[clau];
+                const infoEdifici = EDIFICIS[bData.type];
+                
+                // Retornar el 70% del valor si té cost
+                let retorn = 0;
+                if(infoEdifici) {
+                    retorn = Math.floor(infoEdifici.cost * 0.7);
+                    state.money += retorn;
+                }
+
+                // Eliminar l'entitat/propietari associat si existeix en aquesta casella
+                const initialLen = state.entities.length;
+                state.entities = state.entities.filter(ent => !(ent.homeX === x && ent.homeY === y));
+                const removedEntities = initialLen - state.entities.length;
+
+                delete state.grid[clau];
+                
+                addNotification(`🧹 Edifici enderrocat. Recuperats ${retorn} 💰. ${removedEntities > 0 ? 'La unitat associada ha marxat.' : ''}`);
+                
+                saveGame();
+                renderGrid();
+                updateUI();
+                closeInspector();
+                return;
+            }
+
+            if(state.grid[clau]) {
+                addNotification("❌ Ja hi ha alguna cosa construïda aquí.", "error");
+                return;
+            }
+
+            const infoEdifici = EDIFICIS[currentTool];
+            if(state.money >= infoEdifici.cost) {
+                state.money -= infoEdifici.cost;
+                
+                let bData = {
+                    type: currentTool, icon: infoEdifici.icon, name: infoEdifici.name
+                };
+
+                if(currentTool === 'botiga') {
+                    const lletra = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                    const nom = NOMS[Math.floor(Math.random() * NOMS.length)] + " " + lletra + ".";
+                    const ofici = OFICIS[Math.floor(Math.random() * OFICIS.length)];
+                    bData.name = `${ofici} d'en/na ${nom}`;
+                    bData.owner = nom; bData.soul = 'Classe: Artesà/Productor';
+                    spawnEntity('aldea', x, y, nom);
+                    addNotification(`🏠 Nova casa/botiga per a ${nom}.`);
+                } else if (currentTool === 'quarter') {
+                    bData.soul = 'Classe: Guardià';
+                    spawnEntity('guardia', x, y);
+                    addNotification("🛡️ Nou guardià reclutat.");
+                } else if (currentTool === 'academia') {
+                    bData.soul = 'Classe: Governant/Filòsof';
+                    spawnEntity('filosof', x, y);
+                    addNotification(`⚖️ S'ha alçat: ${infoEdifici.name}. Un nou filòsof s'ha unit a la polis.`);
+                } else if (currentTool === 'ajuntament' || currentTool === 'temple') {
+                    bData.soul = 'Classe: Governant/Filòsof';
+                    addNotification(`⚖️ S'ha alçat: ${infoEdifici.name}. Major estabilitat.`);
+                } else if (currentTool === 'mercat') {
+                    bData.soul = 'Classe: Artesà/Productor';
+                    addNotification("🛒 Nou mercat. L'economia prospera.");
+                }
+
+                state.grid[clau] = bData;
+                saveGame();
+                renderGrid(); 
+                updateUI();
+            } else {
+                addNotification("💸 No tens prous dracmes!", "error");
+            }
+        }
+
+        // --- FUNCIONS QUE FALTAVEN: EXPANDIR I REINICIAR ---
+        function expandirPolis() {
+            if(state.money >= state.expandCost) {
+                state.money -= state.expandCost;
+                state.gridSize += 5;
+                state.expandCost = Math.floor(state.expandCost * 1.5);
+                document.getElementById('btn-cost-ampliar').innerText = `${state.expandCost.toLocaleString()} 💰`;
+                
+                // Re-centrar càmera lleugerament per acomodar l'espai extra
+                mapOffsetX -= (5 * TILE_SIZE) / 2;
+                mapOffsetY -= (5 * TILE_SIZE) / 2;
+                
+                updateCamera();
+                renderGrid();
+                updateUI();
+                saveGame();
+                addNotification("🗺️ La teva Polis s'ha ampliat amb èxit!");
+            } else {
+                addNotification("💸 No tens prous dracmes per ampliar la ciutat!", "error");
+            }
+        }
+
+        function resetGame() {
+            if(confirm("Estàs segur que vols cremar la teva Polis i començar de zero? Es perdrà tot el teu progrés i tots els dracmes que hagis guanyat.")) {
+                localStorage.removeItem('polis_cat_save_v2');
+                location.reload();
+            }
+        }
+
+        // --- SISTEMA D'INSPECCIÓ I CENS ---
+        function showInspector(data, isEntity = false) {
+            inspectorPanel.classList.remove('hidden');
+            document.getElementById('insp-title').innerText = data.name || data.nom;
+            document.getElementById('insp-icon').innerText = data.icon;
+            
+            document.getElementById('insp-type').innerText = data.soul || 
+                (data.type === 'guardia' ? 'Classe: Guardià' : (data.type === 'aldea' ? 'Classe: Artesà' : (data.type === 'filosof' ? 'Classe: Filòsof' : 'Estructura o Decoració')));
+            
+            if(isEntity && data.type !== 'atacant') {
+                document.getElementById('insp-mood-container').style.display = 'block';
+                document.getElementById('insp-mood').innerText = state.happiness > 75 ? '😊 Feliç' : (state.happiness > 40 ? '😐 Normal' : '😠 Descontent');
+                document.getElementById('insp-thought').innerText = `"${data.thought}"`;
+            } else if (data.owner) {
+                document.getElementById('insp-mood-container').style.display = 'block';
+                document.getElementById('insp-mood').innerText = `Propietat de: ${data.owner}`;
+                document.getElementById('insp-thought').innerText = `"Treballant dur per la Polis."`;
+            } else {
+                document.getElementById('insp-mood-container').style.display = 'none';
+                document.getElementById('insp-thought').innerText = `"Estructura fonamental de la ciutat."`;
+            }
+        }
+
+        function closeInspector() {
+            inspectorPanel.classList.add('hidden');
+        }
+
+        function toggleCens() {
+            const modal = document.getElementById('cens-modal');
+            if(modal.classList.contains('active')) {
+                modal.classList.remove('active');
+            } else {
+                renderCens();
+                modal.classList.add('active');
+            }
+        }
+
+        // --- NOU: FUNCIÓ RENDER CENS ---
+        function renderCens() {
+            const list = document.getElementById('cens-list');
+            list.innerHTML = '';
+            
+            // Excloure els invasors del cens
+            const ciutadans = state.entities.filter(e => e.type !== 'atacant');
+            
+            if(ciutadans.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 italic p-4 text-center">No hi ha cap ciutadà a la teva Polis. Construeix botigues per atraure\'ls.</p>';
+                return;
+            }
+            
+            ciutadans.forEach(ent => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-4 p-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-shadow';
+                
+                let role = "Ciutadà";
+                let roleColor = "text-gray-500";
+                
+                if(ent.type === 'aldea') { role = "Artesà / Productor"; roleColor = "text-orange-600"; }
+                if(ent.type === 'guardia') { role = "Guardià (Coratge)"; roleColor = "text-gray-600"; }
+                if(ent.type === 'filosof') { role = "Filòsof (Raó)"; roleColor = "text-yellow-600"; }
+                
+                item.innerHTML = `
+                    <div class="text-3xl w-14 h-14 flex items-center justify-center bg-gray-50 rounded-full border border-gray-200 shadow-sm">
+                        ${ent.icon}
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-gray-800 text-lg">${ent.nom}</p>
+                        <p class="text-sm font-medium ${roleColor}">${role}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Estat actual</p>
+                        <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">${ent.action}</span>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('active');
+            if(modal.classList.contains('active')) {
+                renderMusicList();
+            }
+        }
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            audioEl.muted = isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        // --- SISTEMA DE MÚSICA ---
+        function renderMusicList() {
+            const container = document.getElementById('music-list');
+            container.innerHTML = '';
+
+            MUSICA.forEach(m => {
+                const isUnlocked = state.unlockedTracks.includes(m.id);
+                const isPlaying = state.currentTrack === m.id;
+
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2 rounded bg-white border border-gray-200";
+
+                let actionBtn = '';
+                if (isPlaying) {
+                    actionBtn = `<span class="text-green-600 font-bold">▶️ Sonant</span>`;
+                } else if (isUnlocked) {
+                    actionBtn = `<button onclick="playTrack('${m.id}')" class="px-2 py-1 bg-green-100 text-green-700 font-bold rounded hover:bg-green-200">Reprodueix</button>`;
+                } else {
+                    actionBtn = `<button onclick="buyTrack('${m.id}', ${m.cost})" class="px-2 py-1 bg-yellow-100 text-yellow-800 font-bold rounded hover:bg-yellow-200">Comprar (${m.cost} 💰)</button>`;
+                }
+
+                div.innerHTML = `
+                    <span class="font-medium text-gray-800">${m.title}</span>
+                    <div>${actionBtn}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function playTrack(trackId) {
+            state.currentTrack = trackId;
+            audioEl.src = trackId;
+            audioEl.play().catch(e => console.log("L'àudio requereix una interacció prèvia amb l'usuari."));
+            renderMusicList();
+            saveGame();
+            addNotification(`🎵 Reproduint: ${trackId}`);
+        }
+
+        function buyTrack(trackId, cost) {
+            if(state.money >= cost) {
+                state.money -= cost;
+                state.unlockedTracks.push(trackId);
+                updateUI();
+                playTrack(trackId);
+                addNotification(`🎶 Nova cançó desblocada!`);
+            } else {
+                addNotification("💸 No tens prous dracmes per comprar aquesta cançó!", "error");
+            }
+        }
+
+        // --- NOTIFICACIONS ---
+        function addNotification(text, type = "info") {
+            const notif = document.createElement('div');
+            notif.className = `notification glass-panel p-3 rounded-lg shadow-lg text-sm font-medium border-l-4 pointer-events-auto ${type === 'error' ? 'border-red-500 text-red-700' : 'border-blue-500 text-gray-800'}`;
+            notif.innerText = text;
+            
+            feedContainer.prepend(notif);
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                notif.style.transition = 'opacity 0.5s';
+                setTimeout(() => notif.remove(), 500);
+            }, 4000);
+        }
+
+        // --- LÒGICA I BUCLE DE JOC ---
+        function gameTick() {
+            let compte = { botiga: 0, mercat: 0, quarter: 0, entrenament: 0, academia: 0, ajuntament: 0, temple: 0 };
+            for(let key in state.grid) {
+                if(compte[state.grid[key].type] !== undefined) compte[state.grid[key].type]++;
+            }
+            
+            // Economia
+            // MODIFICAT: Els dracmes ja no es generen automàticament de forma passiva.
+            // Ara requereix esforç anar a estudiar a l'Acadèmia!
+            /*
+            let ingressos = (compte.botiga * 10) + (compte.mercat * 50);
+            if(ingressos > 0) state.money += ingressos;
+            */
+
+            // --- SISTEMA DE GUIA (CONSELLS DE L'ÀGORA) ---
+            adviceCooldown--;
+            if (adviceCooldown <= 0) {
+                adviceCooldown = 8; // Canvia el consell com a mínim cada 8 segons
+                let consell = "La ciutat prospera en harmonia.";
+                if (compte.botiga < 3) {
+                    consell = "💡 Falten ciutadans: Construeix més cases/botigues per atreure artesans i generar economia.";
+                } else if (compte.quarter === 0 && compte.botiga >= 3) {
+                    consell = "⚠️ Riquesa sense protecció: Construeix un Quarter de Guardians o els invasors atacaran la polis!";
+                } else if (compte.quarter > 0 && compte.academia === 0) {
+                    consell = "💡 Els Guardians necessiten educació: Construeix una Acadèmia per establir l'equilibri platònic.";
+                } else if (compte.botiga > 6 && compte.ajuntament === 0) {
+                    consell = "⚖️ La ciutat creix: Necessita un Ajuntament perquè els Filòsofs governin amb Raó.";
+                } else if (state.happiness < 50) {
+                    consell = "🚨 El poble està descontent! Construeix edificis de raó i coratge per restablir l'ordre.";
+                } else {
+                    const reflexions = [
+                        "📜 Un filòsof murmura: 'Només sé que no sé res'.",
+                        "🌬️ Una suau brisa verda travessa el prat de la Polis.",
+                        "✨ L'harmonia entre les 3 classes fa forta la ciutat.",
+                        "⚖️ La justícia és que cadascú faci allò que li pertoca."
+                    ];
+                    consell = reflexions[Math.floor(Math.random() * reflexions.length)];
+                }
+                const consellsEl = document.getElementById('ui-consells');
+                if (consellsEl) {
+                    consellsEl.innerText = `"${consell}"`;
+                }
+            }
+
+            // Esdeveniments Aleatoris dels Ciutadans (Només aquesta font de diners gratis es manté per balanceig aleatori)
+            if(Math.random() < 0.05 && state.entities.length > 0) {
+                const artesans = state.entities.filter(e => e.type === 'aldea');
+                if(artesans.length > 0) {
+                    const ciutadà = artesans[Math.floor(Math.random() * artesans.length)];
+                    if(Math.random() > 0.5) {
+                        addNotification(`🌟 ${ciutadà.nom} ha organitzat un festival i dona 500💰 a la ciutat!`);
+                        state.money += 500;
+                    } else {
+                        addNotification(`🗣️ ${ciutadà.nom} està debatent sobre les virtuts a l'Àgora.`);
+                    }
+                }
+            }
+
+            // Harmonia
+            let targetFelicitat = 100;
+            let or = compte.academia + compte.ajuntament + compte.temple;
+            let plata = compte.quarter + compte.entrenament;
+            let bronze = compte.botiga + compte.mercat;
+
+            // Desequilibris platònics
+            if(bronze > 5 && or === 0) {
+                targetFelicitat -= 30;
+                if(Math.random() < 0.05) addNotification("🗯️ Excés de desig sense govern! Caos a l'Àgora.", "error");
+            }
+            if(plata > 0 && compte.academia === 0) {
+                targetFelicitat -= 15;
+                if(Math.random() < 0.05) addNotification("🗯️ Els guardians necessiten filosofia (Acadèmia).");
+            }
+
+            // Atacs invasors
+            if(Math.random() < (bronze * 0.015) && plata < bronze / 3) {
+                spawnEntity('atacant', Math.random()>0.5 ? 0 : state.gridSize-1, Math.floor(Math.random()*state.gridSize));
+                addNotification("⚠️ Ens ataquen invasors!! Necessitem guardians!", "error");
+                targetFelicitat -= 15;
+            }
+
+            // Suavitzat felicitat
+            if(state.happiness > targetFelicitat) state.happiness -= 1;
+            else if(state.happiness < targetFelicitat) state.happiness += 1;
+
+            // IA ENTITATS
+            state.entities.forEach(ent => {
+                // Bug fix: Si surt del mapa, retorna a casa
+                if(ent.x < 0 || ent.x >= state.gridSize || ent.y < 0 || ent.y >= state.gridSize) {
+                    ent.x = ent.homeX || Math.floor(state.gridSize/2);
+                    ent.y = ent.homeY || Math.floor(state.gridSize/2);
+                    ent.targetX = ent.x; ent.targetY = ent.y;
+                }
+
+                if(ent.x === ent.targetX && ent.y === ent.targetY) {
+                    if(ent.type !== 'atacant') {
+                        if(Math.random() < 0.3) {
+                            // Moure's dins dels límits
+                            let nx = ent.x + (Math.floor(Math.random()*3)-1);
+                            let ny = ent.y + (Math.floor(Math.random()*3)-1);
+                            nx = Math.max(0, Math.min(state.gridSize-1, nx));
+                            ny = Math.max(0, Math.min(state.gridSize-1, ny));
+                            ent.targetX = nx; ent.targetY = ny;
+                            ent.action = 'Passejant';
+                        } else {
+                            ent.action = 'Descansant';
+                        }
+                    } else {
+                        // Atacant avança al centre i danya
+                        let nx = ent.x + (ent.x < state.gridSize/2 ? 1 : -1);
+                        let ny = ent.y + (ent.y < state.gridSize/2 ? 1 : -1);
+                        ent.targetX = Math.max(0, Math.min(state.gridSize-1, nx));
+                        ent.targetY = Math.max(0, Math.min(state.gridSize-1, ny));
+                        state.happiness -= 1; 
+                    }
+                } else {
+                    if(ent.x < ent.targetX) ent.x++; else if(ent.x > ent.targetX) ent.x--;
+                    if(ent.y < ent.targetY) ent.y++; else if(ent.y > ent.targetY) ent.y--;
+                }
+            });
+
+            // Combats
+            let guardians = state.entities.filter(e => e.type === 'guardia');
+            let atacants = state.entities.filter(e => e.type === 'atacant');
+            
+            atacants.forEach(at => {
+                guardians.forEach(gu => {
+                    if(Math.abs(at.x - gu.x) <= 1 && Math.abs(at.y - gu.y) <= 1) {
+                        at.dead = true;
+                        addNotification("🛡️ Un Guardià ha vençut un invasor!");
+                        gu.action = 'Lluitant';
+                    }
+                });
+            });
+            state.entities = state.entities.filter(e => !e.dead);
+
+            updateUI(compte);
+            if(Math.random() < 0.2) saveGame();
+        }
+
+        // --- RENDERITZAT VISUAL FLUIT ---
+        let entityDOMs = {}; 
+        
+        function renderEntitiesVisuals() {
+            const currentIds = state.entities.map(e => e.id);
+            for(let id in entityDOMs) {
+                if(!currentIds.includes(id)) {
+                    entityDOMs[id].remove();
+                    delete entityDOMs[id];
+                }
+            }
+
+            state.entities.forEach(ent => {
+                let el = entityDOMs[ent.id];
+                if(!el) {
+                    el = document.createElement('div');
+                    el.className = `entity ${ent.classeCSS || 'bronze'}`;
+                    el.innerText = ent.icon;
+                    // Bug Fix: Event de click correcte
+                    el.addEventListener('mouseup', (e) => {
+                        e.stopPropagation();
+                        if(!isDragging && currentTool === 'cursor') showInspector(ent, true);
+                    });
+                    entityLayer.appendChild(el);
+                    entityDOMs[ent.id] = el;
+                }
+                // Actualitzar posició (transició CSS suavitzada)
+                el.style.transform = `translate(${ent.x * TILE_SIZE}px, ${ent.y * TILE_SIZE}px)`;
+            });
+
+            requestAnimationFrame(renderEntitiesVisuals);
+        }
+
+        function updateUI(compte = null) {
+            document.getElementById('ui-money').innerText = `${Math.floor(state.money).toLocaleString()} 💰`;
+            document.getElementById('ui-happiness').style.width = `${Math.max(0, Math.min(100, state.happiness))}%`;
+            document.getElementById('ui-happiness').className = `h-full transition-all duration-500 ${state.happiness > 70 ? 'bg-green-500' : (state.happiness > 30 ? 'bg-yellow-500' : 'bg-red-500')}`;
+
+            if(compte) {
+                let bronze = compte.botiga * 2 + compte.mercat * 3;
+                let plata = compte.quarter * 2 + compte.entrenament * 2;
+                let or = compte.ajuntament * 3 + compte.academia * 2 + compte.temple * 4;
+                let total = bronze + plata + or;
+                
+                if(total > 0) {
+                    document.getElementById('ui-bar-bronze').style.width = `${(bronze/total)*100}%`;
+                    document.getElementById('ui-bar-silver').style.width = `${(plata/total)*100}%`;
+                    document.getElementById('ui-bar-gold').style.width = `${(or/total)*100}%`;
+                }
+            }
+        }
+
+        // --- SISTEMA DE GUARDAT ---
+        function saveGame() {
+            localStorage.setItem('polis_cat_save_v2', JSON.stringify(state));
+        }
+        
+        function loadGame() {
+            const saved = localStorage.getItem('polis_cat_save_v2');
+            if (saved) {
+                try { 
+                    state = JSON.parse(saved); 
+                    state.entities.forEach(e => {
+                        e.id = Math.random().toString(36).substring(7);
+                        if(e.homeX === undefined) { e.homeX = e.x; e.homeY = e.y; }
+                    });
+                    if(!state.unlockedTracks) state.unlockedTracks = ['theme.mp3'];
+                    if(!state.currentTrack) state.currentTrack = 'theme.mp3';
+                } catch(e){}
+            }
+        }
+
+        // --- SISTEMA DE CÒPIA DE SEGURETAT OCULT ---
+        function exportBackup() {
+            try {
+                // Suport UTF-8 segur per a btoa (evita l'error amb accents/unicodes)
+                const jsonStr = JSON.stringify(state);
+                const utf8Bytes = new TextEncoder().encode(jsonStr);
+                let binaryStr = "";
+                for (let i = 0; i < utf8Bytes.length; i++) {
+                    binaryStr += String.fromCharCode(utf8Bytes[i]);
+                }
+                const saveString = btoa(binaryStr);
+                
+                const blob = new Blob([saveString], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `La_Meva_Polis_${new Date().toISOString().split('T')[0]}.polis`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                addNotification("📥 Arxiu encriptat '.polis' descarregat correctament.");
+                toggleSettings();
+            } catch (err) {
+                console.error("Error en l'exportació:", err);
+                addNotification("❌ Error en generar el fitxer de còpia de seguretat.", "error");
+            }
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const rawBase64 = e.target.result.trim();
+                    const binaryStr = atob(rawBase64);
+                    const bytes = Uint8Array.from(binaryStr, char => char.charCodeAt(0));
+                    const decodedJson = new TextDecoder().decode(bytes);
+                    const parsedState = JSON.parse(decodedJson);
+                    
+                    if (parsedState && parsedState.grid && typeof parsedState.money === 'number') {
+                        state = parsedState;
+                        saveGame();
+                        addNotification("📤 Polis restaurada! L'oracle prediu una nova era...");
+                        setTimeout(() => location.reload(), 1200);
+                    } else {
+                        throw new Error("Dades invàlides");
+                    }
+                } catch (error) {
+                    console.error("Error en la importació:", error);
+                    addNotification("❌ Error: L'arxiu .polis no és vàlid o està corromput.", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
