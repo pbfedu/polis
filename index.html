@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>POLIS - La Ciutat Platònica</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -26,6 +26,7 @@
             overflow: hidden;
             margin: 0;
             height: 100vh;
+            height: 100dvh; /* Adaptació per a navegadors mòbils */
             display: flex;
             flex-direction: column;
         }
@@ -48,6 +49,7 @@
             overflow: hidden;
             cursor: grab;
             background: #090d16;
+            touch-action: none; /* Prevé el scroll natiu al moure el mapa en mòbil */
         }
         #map-container:active { cursor: grabbing; }
 
@@ -55,6 +57,7 @@
             position: absolute;
             transform-origin: top left;
             transition: transform 0.2s ease-out; /* Smooth Zoom/Pan */
+            will-change: transform;
         }
 
         #map {
@@ -131,11 +134,12 @@
         .build-btn {
             transition: all 0.2s;
             border: 2px solid transparent;
+            flex-shrink: 0; /* Evita que s'encongeixin en format mòbil */
         }
         .build-btn:hover { background-color: #f8fafc; border-color: #cbd5e1; }
         .build-btn.selected { border-color: var(--gold); background-color: #fffbeb; }
 
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
@@ -156,46 +160,51 @@
         #cens-modal.active, #settings-modal.active {
             display: flex;
         }
+
+        @media (max-width: 768px) {
+            .mobile-hide { display: none !important; }
+            .mobile-category { margin-top: 0 !important; margin-left: 0.5rem; margin-right: 0.5rem; align-self: center; }
+        }
     </style>
 </head>
 <body>
 
     <!-- Header / HUD -->
-    <header class="glass-panel m-4 p-4 flex justify-between items-center z-20">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800 tracking-wider cinzel">POLIS</h1>
-            <p class="text-xs text-gray-500 uppercase tracking-widest font-semibold">Beta Build</p>
+    <header class="glass-panel m-2 md:m-4 p-2 md:p-4 flex flex-wrap justify-between items-center z-20 gap-y-2">
+        <div class="flex-shrink-0">
+            <h1 class="text-xl md:text-2xl font-bold text-gray-800 tracking-wider cinzel">POLIS</h1>
+            <p class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-semibold">Beta Build</p>
         </div>
         
-        <div class="flex gap-4 items-center">
+        <div class="flex gap-2 md:gap-4 items-center flex-wrap justify-end">
             
             <!-- NOU BOTÓ: Estudiar a l'Acadèmia -->
-            <a href="play.html" class="px-5 py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 shadow-md transition-colors cinzel whitespace-nowrap flex items-center gap-2 border border-yellow-500 mr-2">
-                <span class="text-xl">🎓</span> Estudiar a l'Acadèmia
+            <a href="play.html" class="px-2 md:px-5 py-1 md:py-2 bg-yellow-400 text-yellow-900 font-bold rounded-lg hover:bg-yellow-300 shadow-md transition-colors cinzel whitespace-nowrap flex items-center gap-1 md:gap-2 border border-yellow-500 text-xs md:text-base">
+                <span class="text-base md:text-xl">🎓</span> <span class="hidden md:inline">Estudiar a l'Acadèmia</span><span class="inline md:hidden">Acadèmia</span>
             </a>
 
             <!-- Controls Zoom, Cens i Música -->
-            <div class="flex gap-2 mr-4 border-r pr-4 border-gray-200">
-                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl" onclick="adjustZoom(0.1)" title="Zoom In">➕</button>
-                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl" onclick="adjustZoom(-0.1)" title="Zoom Out">➖</button>
-                <button class="px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold text-sm ml-2" onclick="toggleCens()">📜 Cens</button>
-                <button class="p-2 bg-gray-100 hover:bg-gray-200 rounded text-xl ml-1" id="mute-btn" onclick="toggleMute()" title="Silenciar/Activar Música">🔊</button>
-                <button class="px-2 py-2 text-gray-500 hover:text-gray-800 rounded font-bold text-lg ml-1" onclick="toggleSettings()" title="Sistema ocult">⚙️</button>
+            <div class="flex gap-1 md:gap-2 border-l border-r px-2 md:pr-4 md:border-l-0 border-gray-200">
+                <button class="p-1 md:p-2 bg-gray-100 hover:bg-gray-200 rounded text-sm md:text-xl" onclick="adjustZoom(0.1)" title="Zoom In">➕</button>
+                <button class="p-1 md:p-2 bg-gray-100 hover:bg-gray-200 rounded text-sm md:text-xl" onclick="adjustZoom(-0.1)" title="Zoom Out">➖</button>
+                <button class="px-2 py-1 md:px-3 md:py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-bold text-xs md:text-sm" onclick="toggleCens()">📜<span class="hidden md:inline"> Cens</span></button>
+                <button class="p-1 md:p-2 bg-gray-100 hover:bg-gray-200 rounded text-sm md:text-xl" id="mute-btn" onclick="toggleMute()" title="Silenciar/Activar Música">🔊</button>
+                <button class="px-1 py-1 md:px-2 md:py-2 text-gray-500 hover:text-gray-800 rounded font-bold text-sm md:text-lg" onclick="toggleSettings()" title="Sistema ocult">⚙️</button>
             </div>
 
-            <div class="text-center">
-                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Tresoreria</p>
-                <p class="text-xl font-bold text-yellow-600" id="ui-money">100,000 💰</p>
+            <div class="text-center min-w-[70px]">
+                <p class="text-[10px] md:text-xs text-gray-500 font-bold uppercase mb-0 md:mb-1">Tresoreria</p>
+                <p class="text-sm md:text-xl font-bold text-yellow-600" id="ui-money">100,000 💰</p>
             </div>
             
-            <div class="text-center px-4">
-                <p class="text-xs text-gray-500 font-bold uppercase mb-1">Felicitat</p>
-                <div class="w-32 h-3 bg-gray-200 rounded-full mt-2 overflow-hidden mx-auto">
+            <div class="text-center px-1 md:px-4">
+                <p class="text-[10px] md:text-xs text-gray-500 font-bold uppercase mb-0 md:mb-1">Felicitat</p>
+                <div class="w-16 md:w-32 h-2 md:h-3 bg-gray-200 rounded-full mt-1 md:mt-2 overflow-hidden mx-auto">
                     <div id="ui-happiness" class="h-full bg-green-500 transition-all duration-500" style="width: 100%;"></div>
                 </div>
             </div>
 
-            <div class="text-center">
+            <div class="text-center hidden md:block">
                 <p class="text-xs text-gray-500 font-bold uppercase mb-1">Harmonia</p>
                 <div class="w-32 h-3 bg-gray-200 rounded-full mt-2 overflow-hidden mx-auto flex">
                     <div id="ui-bar-bronze" class="h-full bg-orange-400 transition-all duration-500" title="Artesans (Desig)" style="width: 33.3%;"></div>
@@ -206,110 +215,14 @@
         </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden relative">
+    <!-- Flex container: Canvia a columna a mòbils -->
+    <div class="flex flex-col md:flex-row flex-1 overflow-hidden relative pb-2 md:pb-0">
         
-        <!-- Left Sidebar: Constucció -->
-        <aside class="w-72 glass-panel m-4 mt-0 p-4 flex flex-col gap-2 z-20 overflow-y-auto">
-            <h2 class="text-lg cinzel font-bold text-gray-800 border-b pb-2 mb-2">Construcció</h2>
-            
-            <button class="build-btn selected p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('cursor')">
-                <span class="text-2xl">👆</span>
-                <div>
-                    <div class="font-bold text-sm">Inspeccionar</div>
-                </div>
-            </button>
-
-            <!-- Artesans -->
-            <p class="text-xs font-bold text-orange-600 mt-2">Bronze (Desig)</p>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('botiga')">
-                <span class="text-2xl">🏠</span>
-                <div>
-                    <div class="font-bold text-sm">Botiga / Casa</div>
-                    <div class="text-xs text-gray-500">1,000 💰</div>
-                </div>
-            </button>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('mercat')">
-                <span class="text-2xl">🛒</span>
-                <div>
-                    <div class="font-bold text-sm">Mercat Àgora</div>
-                    <div class="text-xs text-gray-500">3,000 💰 (Genera riquesa)</div>
-                </div>
-            </button>
-
-            <!-- Guardians -->
-            <p class="text-xs font-bold text-gray-500 mt-2">Plata (Coratge)</p>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('quarter')">
-                <span class="text-2xl">🛡️</span>
-                <div>
-                    <div class="font-bold text-sm">Quarter</div>
-                    <div class="text-xs text-gray-500">2,500 💰</div>
-                </div>
-            </button>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('entrenament')">
-                <span class="text-2xl">⚔️</span>
-                <div>
-                    <div class="font-bold text-sm">Zona d'Entrenament</div>
-                    <div class="text-xs text-gray-500">4,000 💰</div>
-                </div>
-            </button>
-
-            <!-- Governants -->
-            <p class="text-xs font-bold text-yellow-600 mt-2">Or (Raó)</p>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('academia')">
-                <span class="text-2xl">📚</span>
-                <div>
-                    <div class="font-bold text-sm">Acadèmia</div>
-                    <div class="text-xs text-gray-500">5,000 💰</div>
-                </div>
-            </button>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('ajuntament')">
-                <span class="text-2xl">🏛️</span>
-                <div>
-                    <div class="font-bold text-sm">Ajuntament</div>
-                    <div class="text-xs text-gray-500">15,000 💰</div>
-                </div>
-            </button>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('temple')">
-                <span class="text-2xl">🏛️</span>
-                <div>
-                    <div class="font-bold text-sm">Temple de la Raó</div>
-                    <div class="text-xs text-gray-500">25,000 💰</div>
-                </div>
-            </button>
-
-            <!-- Deco -->
-            <p class="text-xs font-bold text-green-600 mt-2">Decoració</p>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('arbre')">
-                <span class="text-2xl">🌳</span><div><div class="font-bold text-sm">Arbre</div><div class="text-xs text-gray-500">100 💰</div></div>
-            </button>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3" onclick="selectTool('estatua')">
-                <span class="text-2xl">🗿</span><div><div class="font-bold text-sm">Estàtua de Sòcrates</div><div class="text-xs text-gray-500">2,000 💰</div></div>
-            </button>
-
-            <!-- Enderrocar / Borrar -->
-            <p class="text-xs font-bold text-red-600 mt-2">Gestió d'Espai</p>
-            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-3 bg-red-50 hover:bg-red-100" onclick="selectTool('borrar')">
-                <span class="text-2xl">🧹</span>
-                <div>
-                    <div class="font-bold text-sm text-red-700">Enderrocar</div>
-                    <div class="text-xs text-red-500">Recuperes un 70% del valor</div>
-                </div>
-            </button>
-
-            <div class="mt-auto pt-4 border-t border-gray-200 space-y-2">
-                <button class="w-full p-2 bg-green-50 text-green-700 rounded text-sm font-bold hover:bg-green-100 flex justify-between" onclick="expandirPolis()">
-                    <span>🗺️ Ampliar Polis</span>
-                    <span id="btn-cost-ampliar">50,000 💰</span>
-                </button>
-                <button class="w-full p-2 bg-red-50 text-red-600 rounded text-sm font-bold hover:bg-red-100" onclick="resetGame()">🔥 Reiniciar Ciutat</button>
-            </div>
-        </aside>
-
         <!-- Main Map Area -->
-        <main id="map-container">
+        <main id="map-container" class="order-1 md:order-2 z-10 rounded-lg mx-2 md:mx-0 md:rounded-none">
             <!-- Panell de Consells (Guia) -->
-            <div class="absolute top-4 left-4 glass-panel p-3 z-30 w-72 border-l-4 border-blue-500 text-sm shadow-md">
-                <h3 class="font-bold text-gray-800 mb-1">📢 Veu de l'Àgora</h3>
+            <div class="absolute top-2 left-2 md:top-4 md:left-4 glass-panel p-2 md:p-3 z-30 w-48 md:w-72 border-l-4 border-blue-500 text-xs md:text-sm shadow-md pointer-events-none md:pointer-events-auto">
+                <h3 class="font-bold text-gray-800 mb-1 hidden md:block">📢 Veu de l'Àgora</h3>
                 <p id="ui-consells" class="text-gray-600 italic">"La ciutat està en calma. Construeix botigues per generar dracmes."</p>
             </div>
 
@@ -321,42 +234,139 @@
             </div>
         </main>
 
+        <!-- Left Sidebar: Constucció -->
+        <aside class="w-full md:w-72 glass-panel m-2 md:m-4 mt-2 md:mt-0 p-2 md:p-4 flex flex-row md:flex-col gap-2 z-20 overflow-x-auto md:overflow-y-auto order-2 md:order-1 flex-shrink-0">
+            <h2 class="text-lg cinzel font-bold text-gray-800 border-b pb-2 mb-2 hidden md:block">Construcció</h2>
+            
+            <button class="build-btn selected p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-40 md:w-full" onclick="selectTool('cursor')">
+                <span class="text-xl md:text-2xl">👆</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Inspeccionar</div>
+                </div>
+            </button>
+
+            <!-- Artesans -->
+            <p class="text-[10px] md:text-xs font-bold text-orange-600 mt-2 mobile-category hidden md:block">Bronze (Desig)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full" onclick="selectTool('botiga')">
+                <span class="text-xl md:text-2xl">🏠</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Botiga / Casa</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">1,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full" onclick="selectTool('mercat')">
+                <span class="text-xl md:text-2xl">🛒</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Mercat Àgora</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">3,000 💰</div>
+                </div>
+            </button>
+
+            <!-- Guardians -->
+            <p class="text-[10px] md:text-xs font-bold text-gray-500 mt-2 mobile-category hidden md:block">Plata (Coratge)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full" onclick="selectTool('quarter')">
+                <span class="text-xl md:text-2xl">🛡️</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Quarter</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">2,500 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-48 md:w-full" onclick="selectTool('entrenament')">
+                <span class="text-xl md:text-2xl">⚔️</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Zona d'Entrenament</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">4,000 💰</div>
+                </div>
+            </button>
+
+            <!-- Governants -->
+            <p class="text-[10px] md:text-xs font-bold text-yellow-600 mt-2 mobile-category hidden md:block">Or (Raó)</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full" onclick="selectTool('academia')">
+                <span class="text-xl md:text-2xl">📚</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Acadèmia</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">5,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full" onclick="selectTool('ajuntament')">
+                <span class="text-xl md:text-2xl">🏛️</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Ajuntament</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">15,000 💰</div>
+                </div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-48 md:w-full" onclick="selectTool('temple')">
+                <span class="text-xl md:text-2xl">🏛️</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm">Temple de la Raó</div>
+                    <div class="text-[10px] md:text-xs text-gray-500">25,000 💰</div>
+                </div>
+            </button>
+
+            <!-- Deco -->
+            <p class="text-[10px] md:text-xs font-bold text-green-600 mt-2 mobile-category hidden md:block">Decoració</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-36 md:w-full" onclick="selectTool('arbre')">
+                <span class="text-xl md:text-2xl">🌳</span><div><div class="font-bold text-xs md:text-sm">Arbre</div><div class="text-[10px] md:text-xs text-gray-500">100 💰</div></div>
+            </button>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-48 md:w-full" onclick="selectTool('estatua')">
+                <span class="text-xl md:text-2xl">🗿</span><div><div class="font-bold text-xs md:text-sm">Estàtua de Sòcrates</div><div class="text-[10px] md:text-xs text-gray-500">2,000 💰</div></div>
+            </button>
+
+            <!-- Enderrocar / Borrar -->
+            <p class="text-[10px] md:text-xs font-bold text-red-600 mt-2 mobile-category hidden md:block">Gestió d'Espai</p>
+            <button class="build-btn p-2 rounded-lg text-left flex items-center gap-2 md:gap-3 w-44 md:w-full bg-red-50 hover:bg-red-100" onclick="selectTool('borrar')">
+                <span class="text-xl md:text-2xl">🧹</span>
+                <div>
+                    <div class="font-bold text-xs md:text-sm text-red-700">Enderrocar</div>
+                    <div class="text-[10px] md:text-xs text-red-500">Recuperes 70%</div>
+                </div>
+            </button>
+
+            <div class="mt-0 md:mt-auto pt-0 md:pt-4 md:border-t border-gray-200 flex flex-row md:flex-col gap-2 min-w-[250px] md:min-w-0">
+                <button class="w-full p-2 bg-green-50 text-green-700 rounded text-xs md:text-sm font-bold hover:bg-green-100 flex justify-between items-center" onclick="expandirPolis()">
+                    <span>🗺️ Ampliar</span>
+                    <span id="btn-cost-ampliar" class="ml-2">50k 💰</span>
+                </button>
+                <button class="w-full p-2 bg-red-50 text-red-600 rounded text-xs md:text-sm font-bold hover:bg-red-100" onclick="resetGame()">🔥 Reiniciar</button>
+            </div>
+        </aside>
+
         <!-- Right Sidebar: Inspector -->
-        <aside id="inspector-panel" class="w-72 glass-panel m-4 mt-0 p-5 flex flex-col z-20 hidden">
+        <aside id="inspector-panel" class="absolute inset-x-2 md:inset-auto md:relative top-2 md:top-0 md:w-72 glass-panel m-0 md:m-4 md:mt-0 p-4 md:p-5 flex flex-col z-40 hidden shadow-2xl md:shadow-md">
             <div class="flex justify-between items-start mb-4 border-b pb-2">
-                <h2 class="text-xl cinzel font-bold text-gray-800" id="insp-title">Nom</h2>
-                <span class="text-3xl" id="insp-icon">❓</span>
+                <h2 class="text-lg md:text-xl cinzel font-bold text-gray-800" id="insp-title">Nom</h2>
+                <span class="text-2xl md:text-3xl" id="insp-icon">❓</span>
             </div>
             
             <div class="space-y-4">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase font-bold">Tipus / Ànima</p>
-                    <p class="text-sm font-medium text-gray-800" id="insp-type">Bronze</p>
+                    <p class="text-[10px] md:text-xs text-gray-500 uppercase font-bold">Tipus / Ànima</p>
+                    <p class="text-xs md:text-sm font-medium text-gray-800" id="insp-type">Bronze</p>
                 </div>
                 
                 <div id="insp-mood-container">
-                    <p class="text-xs text-gray-500 uppercase font-bold">Estat d'Ànim</p>
-                    <p class="text-sm font-medium" id="insp-mood">Feliç</p>
+                    <p class="text-[10px] md:text-xs text-gray-500 uppercase font-bold">Estat d'Ànim</p>
+                    <p class="text-xs md:text-sm font-medium" id="insp-mood">Feliç</p>
                 </div>
 
-                <div class="bg-gray-50 p-3 rounded-lg border border-gray-100 italic text-sm text-gray-600 relative">
-                    <span class="absolute -top-2 -left-2 text-xl">💬</span>
+                <div class="bg-gray-50 p-2 md:p-3 rounded-lg border border-gray-100 italic text-xs md:text-sm text-gray-600 relative">
+                    <span class="absolute -top-2 -left-2 text-lg md:text-xl">💬</span>
                     <p id="insp-thought">"Pensament..."</p>
                 </div>
             </div>
-            <button class="mt-auto w-full p-2 bg-gray-100 text-gray-600 rounded text-sm hover:bg-gray-200" onclick="closeInspector()">Tancar</button>
+            <button class="mt-4 w-full p-2 bg-gray-200 text-gray-700 font-bold rounded text-xs md:text-sm hover:bg-gray-300" onclick="closeInspector()">Tancar</button>
         </aside>
 
     </div>
 
     <!-- Feed de Notificacions -->
-    <div id="feed-container" class="absolute bottom-4 left-80 w-80 z-30 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="feed-container" class="absolute bottom-20 md:bottom-4 left-4 md:left-80 right-4 md:right-auto md:w-80 z-30 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Modal Cens -->
-    <div id="cens-modal" class="fixed inset-0 z-50 justify-center items-center">
-        <div class="glass-panel w-3/4 max-w-2xl max-h-[80vh] flex flex-col p-6 rounded-xl shadow-2xl relative">
-            <button class="absolute top-4 right-4 text-gray-500 hover:text-black font-bold text-xl" onclick="toggleCens()">×</button>
-            <h2 class="text-2xl cinzel font-bold mb-4 border-b pb-2">Cens de Ciutadans</h2>
+    <div id="cens-modal" class="fixed inset-0 z-50 justify-center items-center p-4">
+        <div class="glass-panel w-full md:w-3/4 max-w-2xl max-h-[80vh] flex flex-col p-4 md:p-6 rounded-xl shadow-2xl relative">
+            <button class="absolute top-2 md:top-4 right-3 md:right-4 text-gray-500 hover:text-black font-bold text-2xl" onclick="toggleCens()">×</button>
+            <h2 class="text-xl md:text-2xl cinzel font-bold mb-4 border-b pb-2">Cens de Ciutadans</h2>
             <div class="overflow-y-auto flex-1 pr-2 space-y-2" id="cens-list">
                 <!-- Lista se llena por JS -->
             </div>
@@ -364,22 +374,22 @@
     </div>
 
     <!-- Modal Settings (Menú Ocult) -->
-    <div id="settings-modal" class="fixed inset-0 z-50 justify-center items-center">
-        <div class="glass-panel w-96 flex flex-col p-6 rounded-xl shadow-2xl relative">
-            <button class="absolute top-4 right-4 text-gray-500 hover:text-black font-bold text-xl" onclick="toggleSettings()">×</button>
-            <h2 class="text-xl cinzel font-bold mb-3 border-b pb-2">Opcions i Música 🎵</h2>
+    <div id="settings-modal" class="fixed inset-0 z-50 justify-center items-center p-4">
+        <div class="glass-panel w-full md:w-96 flex flex-col p-4 md:p-6 rounded-xl shadow-2xl relative">
+            <button class="absolute top-2 md:top-4 right-3 md:right-4 text-gray-500 hover:text-black font-bold text-2xl" onclick="toggleSettings()">×</button>
+            <h2 class="text-lg md:text-xl cinzel font-bold mb-3 border-b pb-2">Opcions i Música 🎵</h2>
             
             <!-- Hilo Musical / Fil Musical -->
             <div class="mb-4 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                <h3 class="font-bold text-sm text-yellow-800 mb-2">Fil Musical de la Polis</h3>
-                <div class="space-y-2 text-xs" id="music-list">
+                <h3 class="font-bold text-xs md:text-sm text-yellow-800 mb-2">Fil Musical de la Polis</h3>
+                <div class="space-y-2 text-[10px] md:text-xs" id="music-list">
                     <!-- Se llena por JS -->
                 </div>
             </div>
 
-            <h3 class="font-bold text-sm text-gray-700 mb-2 border-b pb-1">Còpia de Seguretat</h3>
-            <p class="text-sm text-gray-600 mb-4">Guarda o restaura la teva Polis de manera segura. Aquest fitxer encriptat conté els ciutadans i l'or.</p>
-            <div class="space-y-3">
+            <h3 class="font-bold text-xs md:text-sm text-gray-700 mb-2 border-b pb-1">Còpia de Seguretat</h3>
+            <p class="text-xs md:text-sm text-gray-600 mb-4">Guarda o restaura la teva Polis de manera segura. Aquest fitxer encriptat conté els ciutadans i l'or.</p>
+            <div class="space-y-3 text-xs md:text-base">
                 <button class="w-full p-2 bg-blue-100 text-blue-700 font-bold rounded hover:bg-blue-200" onclick="exportBackup()">📥 Descarregar Fitxer (.polis)</button>
                 <div class="relative w-full">
                     <input type="file" id="import-file" class="hidden" accept=".polis" onchange="importBackup(event)">
@@ -525,6 +535,7 @@
         }
 
         function setupControls() {
+            // Ratolí
             mapContainer.addEventListener('mousedown', (e) => {
                 if(e.button !== 0) return;
                 isDragging = false;
@@ -534,7 +545,6 @@
             });
             window.addEventListener('mousemove', (e) => {
                 if (!isClicking) return;
-                // Si es mou més de 5px, es considera Drag
                 if(Math.abs((e.clientX - mapOffsetX) - startDragX) > 5 || Math.abs((e.clientY - mapOffsetY) - startDragY) > 5) {
                     isDragging = true;
                 }
@@ -546,7 +556,29 @@
             });
             window.addEventListener('mouseup', () => {
                 isClicking = false;
-                // isDragging es reseteja al handleCellClick/EntityClick per saber si s'ha de processar
+            });
+
+            // Tàctil (Mòbils)
+            mapContainer.addEventListener('touchstart', (e) => {
+                if(e.touches.length !== 1) return;
+                isDragging = false;
+                isClicking = true;
+                startDragX = e.touches[0].clientX - mapOffsetX;
+                startDragY = e.touches[0].clientY - mapOffsetY;
+            }, {passive: true});
+            window.addEventListener('touchmove', (e) => {
+                if (!isClicking || e.touches.length !== 1) return;
+                if(Math.abs((e.touches[0].clientX - mapOffsetX) - startDragX) > 5 || Math.abs((e.touches[0].clientY - mapOffsetY) - startDragY) > 5) {
+                    isDragging = true;
+                }
+                if(isDragging) {
+                    mapOffsetX = e.touches[0].clientX - startDragX;
+                    mapOffsetY = e.touches[0].clientY - startDragY;
+                    updateCamera();
+                }
+            }, {passive: true});
+            window.addEventListener('touchend', () => {
+                isClicking = false;
             });
             
             // Centrar inicial
@@ -572,11 +604,13 @@
                         cell.innerText = state.grid[clau].icon;
                     }
                     
-                    // Events de casella
-                    cell.addEventListener('mouseup', (e) => {
-                        if(isDragging) { isDragging = false; return; } // Ignorar si s'arrossegava
+                    // Events de casella unificats per ratolí i touch
+                    const handleInputEnd = (e) => {
+                        if(isDragging) { isDragging = false; return; }
                         handleCellClick(x, y);
-                    });
+                    };
+                    cell.addEventListener('mouseup', handleInputEnd);
+                    cell.addEventListener('touchend', (e) => { e.preventDefault(); handleInputEnd(e); });
                     gridLayer.appendChild(cell);
                 }
             }
@@ -750,7 +784,7 @@
             
             ciutadans.forEach(ent => {
                 const item = document.createElement('div');
-                item.className = 'flex items-center gap-4 p-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-shadow';
+                item.className = 'flex flex-col md:flex-row items-center gap-2 md:gap-4 p-3 bg-white border border-gray-100 rounded-lg hover:shadow-md transition-shadow';
                 
                 let role = "Ciutadà";
                 let roleColor = "text-gray-500";
@@ -760,15 +794,15 @@
                 if(ent.type === 'filosof') { role = "Filòsof (Raó)"; roleColor = "text-yellow-600"; }
                 
                 item.innerHTML = `
-                    <div class="text-3xl w-14 h-14 flex items-center justify-center bg-gray-50 rounded-full border border-gray-200 shadow-sm">
+                    <div class="text-3xl w-14 h-14 flex items-center justify-center bg-gray-50 rounded-full border border-gray-200 shadow-sm flex-shrink-0">
                         ${ent.icon}
                     </div>
-                    <div class="flex-1">
+                    <div class="flex-1 text-center md:text-left">
                         <p class="font-bold text-gray-800 text-lg">${ent.nom}</p>
                         <p class="text-sm font-medium ${roleColor}">${role}</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Estat actual</p>
+                    <div class="text-center md:text-right mt-2 md:mt-0">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Estat actual</p>
                         <span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">${ent.action}</span>
                     </div>
                 `;
@@ -800,19 +834,19 @@
                 const isPlaying = state.currentTrack === m.id;
 
                 const div = document.createElement('div');
-                div.className = "flex justify-between items-center p-2 rounded bg-white border border-gray-200";
+                div.className = "flex justify-between items-center p-2 rounded bg-white border border-gray-200 gap-2";
 
                 let actionBtn = '';
                 if (isPlaying) {
-                    actionBtn = `<span class="text-green-600 font-bold">▶️ Sonant</span>`;
+                    actionBtn = `<span class="text-green-600 font-bold whitespace-nowrap">▶️ Sonant</span>`;
                 } else if (isUnlocked) {
-                    actionBtn = `<button onclick="playTrack('${m.id}')" class="px-2 py-1 bg-green-100 text-green-700 font-bold rounded hover:bg-green-200">Reprodueix</button>`;
+                    actionBtn = `<button onclick="playTrack('${m.id}')" class="px-2 py-1 bg-green-100 text-green-700 font-bold rounded hover:bg-green-200 whitespace-nowrap">Reprodueix</button>`;
                 } else {
-                    actionBtn = `<button onclick="buyTrack('${m.id}', ${m.cost})" class="px-2 py-1 bg-yellow-100 text-yellow-800 font-bold rounded hover:bg-yellow-200">Comprar (${m.cost} 💰)</button>`;
+                    actionBtn = `<button onclick="buyTrack('${m.id}', ${m.cost})" class="px-2 py-1 bg-yellow-100 text-yellow-800 font-bold rounded hover:bg-yellow-200 whitespace-nowrap">Comprar (${m.cost})</button>`;
                 }
 
                 div.innerHTML = `
-                    <span class="font-medium text-gray-800">${m.title}</span>
+                    <span class="font-medium text-gray-800 text-[10px] md:text-xs truncate">${m.title}</span>
                     <div>${actionBtn}</div>
                 `;
                 container.appendChild(div);
@@ -843,7 +877,7 @@
         // --- NOTIFICACIONS ---
         function addNotification(text, type = "info") {
             const notif = document.createElement('div');
-            notif.className = `notification glass-panel p-3 rounded-lg shadow-lg text-sm font-medium border-l-4 pointer-events-auto ${type === 'error' ? 'border-red-500 text-red-700' : 'border-blue-500 text-gray-800'}`;
+            notif.className = `notification glass-panel p-2 md:p-3 rounded-lg shadow-lg text-xs md:text-sm font-medium border-l-4 pointer-events-auto ${type === 'error' ? 'border-red-500 text-red-700' : 'border-blue-500 text-gray-800'}`;
             notif.innerText = text;
             
             feedContainer.prepend(notif);
@@ -860,14 +894,6 @@
             for(let key in state.grid) {
                 if(compte[state.grid[key].type] !== undefined) compte[state.grid[key].type]++;
             }
-            
-            // Economia
-            // MODIFICAT: Els dracmes ja no es generen automàticament de forma passiva.
-            // Ara requereix esforç anar a estudiar a l'Acadèmia!
-            /*
-            let ingressos = (compte.botiga * 10) + (compte.mercat * 50);
-            if(ingressos > 0) state.money += ingressos;
-            */
 
             // --- SISTEMA DE GUIA (CONSELLS DE L'ÀGORA) ---
             adviceCooldown--;
@@ -899,7 +925,7 @@
                 }
             }
 
-            // Esdeveniments Aleatoris dels Ciutadans (Només aquesta font de diners gratis es manté per balanceig aleatori)
+            // Esdeveniments Aleatoris dels Ciutadans
             if(Math.random() < 0.05 && state.entities.length > 0) {
                 const artesans = state.entities.filter(e => e.type === 'aldea');
                 if(artesans.length > 0) {
@@ -1013,11 +1039,13 @@
                     el = document.createElement('div');
                     el.className = `entity ${ent.classeCSS || 'bronze'}`;
                     el.innerText = ent.icon;
-                    // Bug Fix: Event de click correcte
-                    el.addEventListener('mouseup', (e) => {
+                    // Events unificats clic/touch entitats
+                    const handleEntityClick = (e) => {
                         e.stopPropagation();
                         if(!isDragging && currentTool === 'cursor') showInspector(ent, true);
-                    });
+                    };
+                    el.addEventListener('mouseup', handleEntityClick);
+                    el.addEventListener('touchend', (e) => { e.preventDefault(); handleEntityClick(e); });
                     entityLayer.appendChild(el);
                     entityDOMs[ent.id] = el;
                 }
