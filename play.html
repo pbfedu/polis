@@ -5,217 +5,224 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>POLIS - Acadèmia Platònica</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Polyfill per a Drag and Drop en Mòbils -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0/default.css">
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0/index.min.js"></script>
+    <!-- AQUEST ARXIU FALTAVA I TRENCAVA EL DRAG & DROP EN MÒBIL -->
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0/scroll-behaviour.min.js"></script>
+    <script>
+        // Iniciem el polyfill amb el comportament de scroll
+        MobileDragDrop.polyfill({
+            dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+        });
+        window.addEventListener('touchmove', function() {}, {passive: false});
+    </script>
+
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: rgba(255, 255, 255, 0.92);
-            --gold: #ffd700;
-            --text-main: #1e293b;
+            --bg-color: #0b1120;
+            --panel-bg: rgba(255, 255, 255, 0.94);
+            --gold-glow: rgba(234, 179, 8, 0.35);
+            --emerald-glow: rgba(34, 197, 94, 0.4);
+            --red-glow: rgba(239, 68, 68, 0.4);
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
-            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-            background-size: 24px 24px;
-            color: var(--text-main);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(234, 179, 8, 0.08) 0%, transparent 40%),
+                radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 28px 28px;
+            color: #1e293b;
             margin: 0;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            touch-action: pan-y;
+            overflow-x: hidden;
         }
 
         h1, h2, h3, .cinzel { font-family: 'Cinzel', serif; }
 
         .glass-panel {
             background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
-            border-radius: 12px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 
+                0 20px 40px -15px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            border-radius: 18px;
         }
 
+        .gold-border {
+            border: 2px solid #eab308;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+        }
+
+        /* --- BOTONS I OPCIONS --- */
         .btn-option {
-            transition: all 0.2s;
-            border: 2px solid transparent;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid #e2e8f0;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         }
-        .btn-option:hover {
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-            transform: translateY(-2px);
+        .btn-option:hover:not(:disabled) {
+            background: #ffffff;
+            border-color: #3b82f6;
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.25);
+        }
+        .btn-option:active:not(:disabled) {
+            transform: translateY(-1px);
         }
 
+        /* --- DRAG & DROP --- */
         .draggable {
             cursor: grab;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
+            touch-action: none !important; /* Vital per no fer scroll al arrossegar */
+            user-select: none;
+            -webkit-user-select: none; /* Vital per iOS */
         }
-        .draggable:active {
-            cursor: grabbing;
-        }
+        .draggable:active { cursor: grabbing; transform: scale(1.03); }
+        
         .dropzone {
-            transition: background-color 0.2s;
+            transition: all 0.25s ease;
         }
         .dropzone.hover {
-            background-color: #e2e8f0;
+            background-color: #eff6ff;
             border-color: #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            transform: scale(1.01);
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* --- ANIMACIONS D'ENTRADA I ESTAT --- */
+        @keyframes cardEntrance {
+            0% { opacity: 0; transform: translateY(24px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        
-        @keyframes popOut {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
+        .animate-card-in {
+            animation: cardEntrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-15px) rotate(-2deg); }
-            40%, 80% { transform: translateX(15px) rotate(2deg); }
+        @keyframes shockwaveError {
+            0% { transform: scale(1); border-color: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            15% { transform: scale(0.98) translateX(-8px); }
+            30% { transform: scale(1.01) translateX(8px); }
+            45% { transform: scale(0.99) translateX(-5px); }
+            60% { transform: scale(1.005) translateX(5px); }
+            75% { transform: opacity: 0.9; }
+            100% { transform: scale(1) translateX(0); box-shadow: 0 0 35px rgba(239, 68, 68, 0.6); }
         }
-        .shake-anim {
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-            border-color: #ef4444 !important;
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
+        .error-shockwave {
+            animation: shockwaveError 0.55s ease-in-out forwards !important;
             background-color: #fef2f2 !important;
-        }
-        .success-anim {
-            border-color: #22c55e !important;
-            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6) !important;
-            background-color: #f0fdf4 !important;
-            transform: scale(1.05);
-            transition: all 0.3s ease-out;
-            z-index: 10;
+            border-color: #ef4444 !important;
         }
 
-        .anim-pop {
-            animation: popOut 0.5s ease-out forwards;
+        @keyframes successGlow {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); box-shadow: 0 0 45px rgba(34, 197, 94, 0.7); }
+            100% { transform: scale(1); box-shadow: 0 0 25px rgba(34, 197, 94, 0.4); }
         }
+        .success-glow {
+            animation: successGlow 0.6s ease-out forwards !important;
+            background-color: #f0fdf4 !important;
+            border-color: #22c55e !important;
+        }
+
+        @keyframes modalPop {
+            0% { transform: scale(0.7) translateY(30px); opacity: 0; }
+            70% { transform: scale(1.03) translateY(-5px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .anim-pop { animation: modalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
         #victory-screen {
             display: none;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
+            background: rgba(11, 17, 32, 0.85);
+            backdrop-filter: blur(8px);
         }
-        #victory-screen.active {
-            display: flex;
-        }
+        #victory-screen.active { display: flex; }
     </style>
 </head>
-<body class="p-2 sm:p-4 md:p-8 flex flex-col items-center">
+<body class="p-2 sm:p-4 md:p-8 flex flex-col items-center min-h-screen">
 
-    <!-- Header / HUD optimitzat per a mòbil -->
-    <header class="glass-panel w-full max-w-4xl p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-4 z-20 mb-4 sm:mb-8">
+    <!-- Header / HUD -->
+    <header class="glass-panel w-full max-w-4xl p-3 sm:p-5 flex flex-col sm:flex-row justify-between items-center gap-4 z-20 mb-4 sm:mb-8 border-b-2 border-yellow-500/30">
         <div class="text-center sm:text-left">
-            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 tracking-wider cinzel">ACADÈMIA</h1>
-            <p class="text-[10px] sm:text-xs text-gray-500 uppercase tracking-widest font-semibold">Proves de la Raó</p>
+            <div class="flex items-center justify-center sm:justify-start gap-2">
+                <span class="text-xl sm:text-2xl">🏛️</span>
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-wider cinzel">ACADÈMIA</h1>
+            </div>
+            <p class="text-[10px] sm:text-xs text-blue-600 uppercase tracking-widest font-bold mt-0.5">Proves de la Raó Platònica</p>
         </div>
         
         <div class="flex gap-3 sm:gap-6 items-center w-full sm:w-auto justify-between sm:justify-end">
-            <div class="text-center bg-yellow-50 p-2 rounded-lg border border-yellow-200 shadow-inner flex-1 sm:flex-none">
-                <p class="text-[10px] sm:text-xs text-yellow-700 font-bold uppercase mb-1">Tresoreria</p>
-                <p class="text-lg sm:text-xl md:text-2xl font-bold text-yellow-600" id="ui-money">0 💰</p>
+            <div class="text-center bg-gradient-to-br from-yellow-50 to-amber-100/80 px-4 py-2 rounded-xl border border-yellow-300 shadow-inner flex-1 sm:flex-none">
+                <p class="text-[10px] sm:text-xs text-yellow-800 font-bold uppercase tracking-wider">Tresoreria</p>
+                <p class="text-lg sm:text-2xl font-black text-amber-600" id="ui-money">0 💰</p>
             </div>
             
-            <button onclick="window.location.href='index.html'" class="px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-bold text-xs sm:text-sm shadow-lg transition-transform hover:scale-105 flex items-center gap-1 sm:gap-2 flex-1 sm:flex-none justify-center">
+            <button onclick="window.location.href='index.html'" class="px-4 py-2.5 sm:px-6 sm:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 justify-center">
                 <span>🔙</span> Polis
             </button>
         </div>
     </header>
 
-    <!-- Game Area -->
-    <main class="w-full max-w-4xl flex-grow flex flex-col items-center justify-start sm:justify-center relative px-2">
-        <div id="game-container" class="glass-panel w-full p-4 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-300">
-            <!-- Content injected via JS -->
+    <!-- Game Container Main -->
+    <main class="w-full max-w-4xl flex-grow flex flex-col items-center justify-start sm:justify-center relative px-1">
+        <div id="game-container" class="glass-panel w-full p-4 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-300 border border-white/80">
+            <!-- Injectat dinàmicament via JS -->
         </div>
     </main>
 
-    <!-- Victory Modal optimitzat per a mòbil -->
+    <!-- Modal Victòria -->
     <div id="victory-screen" class="fixed inset-0 z-50 justify-center items-center p-4">
-        <div class="glass-panel w-full max-w-[384px] flex flex-col p-6 sm:p-8 rounded-xl shadow-2xl text-center anim-pop border-4 border-yellow-400" style="box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);">
-            <h2 class="text-4xl sm:text-5xl mb-4 animate-bounce">🎉</h2>
-            <h2 class="text-2xl sm:text-3xl cinzel font-bold text-gray-800 mb-2">Ment Brillant!</h2>
-            <p class="text-sm sm:text-base text-gray-600 mb-6">Has demostrat la teva saviesa platònica.</p>
-            <div class="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 p-3 sm:p-4 rounded-lg font-bold text-xl sm:text-2xl mb-6 shadow-inner">
-                +500 💰
+        <div class="glass-panel w-full max-w-md flex flex-col p-6 sm:p-8 rounded-2xl shadow-2xl text-center anim-pop gold-border relative overflow-hidden">
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl pointer-events-none"></div>
+            <span class="text-5xl sm:text-6xl mb-3 animate-bounce inline-block">🏺</span>
+            <h2 class="text-2xl sm:text-3xl cinzel font-black text-gray-900 mb-1">Ment Brillant!</h2>
+            <p class="text-xs sm:text-sm text-gray-600 mb-6 font-medium">Has demostrat una veritable saviesa platònica.</p>
+            
+            <div class="bg-gradient-to-r from-yellow-100 via-amber-50 to-yellow-100 border-2 border-yellow-400 text-amber-900 p-4 rounded-xl font-black text-2xl mb-6 shadow-inner flex items-center justify-center gap-2">
+                <span>+500</span> 💰
             </div>
-            <button onclick="nextGame()" class="w-full p-3 sm:p-4 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-colors shadow-lg text-lg sm:text-xl flex items-center justify-center gap-2">
+            
+            <button onclick="nextGame()" class="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition-all hover:scale-[1.02] active:scale-95 text-base sm:text-lg flex items-center justify-center gap-2">
                 Següent Prova 🧠
             </button>
         </div>
     </div>
 
+    <!-- Carregar Base de Dades de Preguntes -->
+    <script src="questions.js"></script>
+
     <script>
         let state = { money: 0, happiness: 100, grid: {}, entities: [] };
         const REWARD = 500;
-        let currentGameIndex = -1;
-
-        // AFEGEIX NOVES PREGUNTES AQUÍ:
-        // Només has de copiar l'estructura d'una pregunta 'trivia' o 'dnd' i afegir-la a la llista.
-        const games = [
-            {
-                type: 'trivia',
-                question: 'Al Mite de la Caverna, què representa el Sol exterior?',
-                options: [
-                    'La fama i el poder polític',
-                    'La Idea de Bé, font de tota veritat',
-                    'El foc creat pels sofistes',
-                    'La ignorància dels mortals'
-                ],
-                correct: 1 // L'índex de la resposta correcta (comença a 0)
-            },
-            {
-                type: 'trivia',
-                question: 'Segons el Símil de la Línia, quin tipus de coneixement correspon al Món Sensible (les coses físiques)?',
-                options: ['Doxa (Opinió)', 'Episteme (Ciència)', 'Noesi (Intuïció pura)', 'Matemàtiques'],
-                correct: 0
-            },
-            {
-                type: 'trivia',
-                question: 'A quina classe social correspon la virtut del Coratge (Valor) segons la República de Plató?',
-                options: ['Governants-Filòsofs', 'Artesans i Productors', 'Guardians o Guerrers', 'Esclaus'],
-                correct: 2
-            },
-            {
-                type: 'trivia',
-                question: 'Quin grup de pensadors criticava Plató pel seu relativisme i per cobrar per ensenyar a convèncer (retòrica)?',
-                options: ['Els Pitagòrics', 'Els Sofistes', 'Els Presocràtics', 'Els Epicuris'],
-                correct: 1
-            },
-            {
-                type: 'trivia',
-                question: 'Segons la teoria de la reminiscència de Plató, aprendre és en realitat...',
-                options: ['Memoritzar dades noves', 'Recordar el que l\'ànima ja sabia', 'Observar la natura amb els sentits', 'Obeir els déus cegament'],
-                correct: 1
-            },
-            {
-                type: 'dnd',
-                question: 'Emparella els conceptes del Mite de la Caverna amb el seu significat real:',
-                pairs: [
-                    { id: 'p1', term: 'Ombres', meaning: 'Falses creences / Món Sensible' },
-                    { id: 'p2', term: 'Cadenes', meaning: 'Ignorància i Prejudicis' },
-                    { id: 'p3', term: 'Sol', meaning: 'Idea suprema del Bé' }
-                ]
-            },
-            {
-                type: 'dnd',
-                question: 'Emparella els elements del Mite del Carro Alat amb la part de l\'ànima que representen:',
-                pairs: [
-                    { id: 'c1', term: 'Cavall Blanc', meaning: 'Ànima Irascible (Coratge)' },
-                    { id: 'c2', term: 'Cavall Negre', meaning: 'Ànima Concupiscible (Desitjos)' },
-                    { id: 'c3', term: 'Auriga', meaning: 'Ànima Racional (Raó)' }
-                ]
-            }
-        ];
+        let shuffledGames = [];
+        let currentGameIndex = 0;
 
         function init() {
             loadGame();
             updateUI();
-            loadRandomGame();
+            
+            if (typeof questionsDB !== 'undefined' && questionsDB.length > 0) {
+                shuffledGames = [...questionsDB].sort(() => Math.random() - 0.5);
+                loadRandomGame();
+            } else {
+                document.getElementById('game-container').innerHTML = `
+                    <div class="text-center p-6 text-red-600">
+                        <p class="font-bold text-lg">Error: No s'ha trobat l'arxiu questions.js o està buit.</p>
+                        <p class="text-sm mt-2">Asegura't de tenir l'arxiu <code>questions.js</code> a la mateixa carpeta.</p>
+                    </div>
+                `;
+            }
         }
 
         function loadGame() {
@@ -223,10 +230,9 @@
             if (saved) {
                 try { 
                     state = JSON.parse(saved); 
-                    if(typeof state.money !== 'number') state.money = 0;
-                } catch(e) {
-                    console.error("Error loading save data");
-                }
+                    if(typeof state.money !== 'number') state.money = 0; 
+                } 
+                catch(e) { console.error("Error carregant partida:", e); }
             }
         }
 
@@ -241,30 +247,42 @@
 
         function loadRandomGame() {
             document.getElementById('victory-screen').classList.remove('active');
-            let nextIndex = currentGameIndex;
-            while(nextIndex === currentGameIndex) {
-                nextIndex = Math.floor(Math.random() * games.length);
+            
+            if (currentGameIndex >= shuffledGames.length) {
+                shuffledGames = [...questionsDB].sort(() => Math.random() - 0.5);
+                currentGameIndex = 0;
             }
-            currentGameIndex = nextIndex;
-            const gameData = games[currentGameIndex];
+
+            const gameData = shuffledGames[currentGameIndex];
             const container = document.getElementById('game-container');
+            container.className = "glass-panel w-full p-4 sm:p-8 shadow-2xl relative overflow-hidden animate-card-in border border-white/80";
             container.innerHTML = '';
+
             if(gameData.type === 'trivia') renderTrivia(container, gameData);
+            else if (gameData.type === 'true_false') renderTrueFalse(container, gameData);
+            else if (gameData.type === 'fill_blank') renderFillBlank(container, gameData);
             else if (gameData.type === 'dnd') renderDnD(container, gameData);
         }
 
+        // --- RENDERITZACIÓ DE TIPUS DE PREGUNTES ---
+
         function renderTrivia(container, data) {
+            let optionsWithIndex = data.options.map((opt, i) => ({ text: opt, isCorrect: i === data.correct }));
+            optionsWithIndex.sort(() => Math.random() - 0.5);
+
             let html = `
                 <div class="text-center mb-6 sm:mb-8">
-                    <span class="text-4xl sm:text-5xl mb-2 sm:mb-4 block">❓</span>
-                    <h2 class="text-lg sm:text-2xl cinzel font-bold text-gray-800 leading-relaxed">${data.question}</h2>
+                    <span class="inline-block px-3 py-1 bg-blue-100 border border-blue-300 text-blue-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">Pregunta de Triar</span>
+                    <h2 class="text-lg sm:text-2xl cinzel font-bold text-gray-900 leading-snug">${data.question}</h2>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4" id="trivia-options">
             `;
-            data.options.forEach((opt, index) => {
+            
+            optionsWithIndex.forEach((opt) => {
                 html += `
-                    <button onclick="checkTrivia(${index}, ${data.correct}, this)" class="btn-option p-4 sm:p-5 bg-gray-50 border-2 border-gray-200 rounded-xl text-left shadow-sm hover:shadow-md text-gray-700 font-medium text-sm sm:text-lg relative overflow-hidden transition-all duration-200">
-                        ${opt}
+                    <button onclick="checkTrivia(${opt.isCorrect}, this)" class="btn-option p-4 sm:p-5 rounded-xl text-left shadow-sm text-gray-800 font-semibold text-sm sm:text-base relative overflow-hidden flex items-center justify-between" data-correct="${opt.isCorrect}">
+                        <span class="pr-6">${opt.text}</span>
+                        <span class="status-icon text-xl opacity-0 transition-opacity"></span>
                     </button>
                 `;
             });
@@ -272,28 +290,147 @@
             container.innerHTML = html;
         }
 
-        function checkTrivia(selected, correct, btnElement) {
+        function renderTrueFalse(container, data) {
+            let html = `
+                <div class="text-center mb-6 sm:mb-8">
+                    <span class="inline-block px-3 py-1 bg-purple-100 border border-purple-300 text-purple-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">Judici de Veritat</span>
+                    <h2 class="text-lg sm:text-2xl cinzel font-bold text-gray-900 leading-snug">${data.question}</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto" id="trivia-options">
+                    <button onclick="checkTrivia(${data.correct === true}, this)" class="btn-option p-5 bg-gradient-to-b from-emerald-50 to-emerald-100/60 border-2 border-emerald-300 rounded-xl text-center shadow-sm text-emerald-900 font-black text-lg sm:text-xl hover:border-emerald-500 flex items-center justify-center gap-2" data-correct="${data.correct === true}">
+                        <span>✅</span> VERITAT
+                    </button>
+                    <button onclick="checkTrivia(${data.correct === false}, this)" class="btn-option p-5 bg-gradient-to-b from-rose-50 to-rose-100/60 border-2 border-rose-300 rounded-xl text-center shadow-sm text-rose-900 font-black text-lg sm:text-xl hover:border-rose-500 flex items-center justify-center gap-2" data-correct="${data.correct === false}">
+                        <span>❌</span> FALS
+                    </button>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        function renderFillBlank(container, data) {
+            let html = `
+                <div class="text-center mb-6 sm:mb-8 max-w-2xl mx-auto">
+                    <span class="inline-block px-3 py-1 bg-amber-100 border border-amber-300 text-amber-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">Escriu la Resposta</span>
+                    <h2 class="text-lg sm:text-2xl cinzel font-bold text-gray-900 leading-snug mb-6">${data.question}</h2>
+                    
+                    <div class="relative w-full max-w-md mx-auto">
+                        <input type="text" id="fill-input" autocomplete="off" spellcheck="false"
+                               class="w-full p-4 text-center border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none text-lg sm:text-xl font-bold text-gray-800 transition-all shadow-inner" 
+                               placeholder="Escriu la teva resposta...">
+                    </div>
+
+                    <button onclick="checkFillBlank('${data.correct.replace(/'/g, "\\'")}')" class="mt-5 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 text-base">
+                        Comprovar Resposta 🏛️
+                    </button>
+                </div>
+            `;
+            container.innerHTML = html;
+
+            setTimeout(() => {
+                const inp = document.getElementById('fill-input');
+                if(inp) {
+                    inp.focus();
+                    inp.addEventListener("keypress", function(event) {
+                        if (event.key === "Enter") checkFillBlank(data.correct);
+                    });
+                }
+            }, 100);
+        }
+
+        // --- SISTEMA DE COMPROVACIÓ D'ERRORS I ACCENTS INTEL·LIGENT ---
+
+        function normalizeText(str) {
+            return str
+                .toLowerCase()
+                .trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s]/g, ''); 
+        }
+
+        function levenshteinDistance(a, b) {
+            const matrix = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+            for (let j = 1; j <= b.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j - 1] + cost
+                    );
+                }
+            }
+            return matrix[a.length][b.length];
+        }
+
+        function isAnswerCloseEnough(user, target) {
+            const u = normalizeText(user);
+            const t = normalizeText(target);
+            if (u === t) return true;
+            
+            if (t.length > 3) {
+                return levenshteinDistance(u, t) <= 1;
+            }
+            return false;
+        }
+
+        // --- VALIDACIONS DE RESPOSTA I ANIMACIONS PRO ---
+
+        function checkTrivia(isCorrect, btnElement) {
             const container = document.getElementById('game-container');
             const allBtns = document.querySelectorAll('#trivia-options button');
             allBtns.forEach(btn => btn.disabled = true);
 
-            if(selected === correct) {
-                btnElement.classList.add('success-anim', 'text-green-900', 'font-bold');
-                container.style.boxShadow = "0 0 50px rgba(34, 197, 94, 0.4)";
-                btnElement.innerHTML += ' <span class="absolute right-4 top-1/2 -translate-y-1/2 sm:top-4 sm:translate-y-0 text-xl sm:text-2xl animate-bounce">✅</span>';
-                setTimeout(() => { container.style.boxShadow = ""; triggerVictory(); }, 1000);
+            if(isCorrect) {
+                btnElement.classList.add('success-glow');
+                const icon = btnElement.querySelector('.status-icon');
+                if(icon) { icon.innerText = '✅'; icon.classList.remove('opacity-0'); }
+                
+                setTimeout(() => { triggerVictory(); }, 900);
             } else {
-                btnElement.classList.add('shake-anim', 'text-red-900', 'font-bold');
-                btnElement.innerHTML += ' <span class="absolute right-4 top-1/2 -translate-y-1/2 sm:top-4 sm:translate-y-0 text-xl sm:text-2xl">❌</span>';
-                container.classList.add('shake-anim');
-                allBtns[correct].classList.add('border-green-400', 'bg-green-50', 'text-green-800');
-                allBtns[correct].innerHTML += ' <span class="absolute right-4 top-1/2 -translate-y-1/2 sm:top-4 sm:translate-y-0 text-xl sm:text-2xl opacity-50">✔️</span>';
+                btnElement.classList.add('error-shockwave');
+                const icon = btnElement.querySelector('.status-icon');
+                if(icon) { icon.innerText = '❌'; icon.classList.remove('opacity-0'); }
+                
+                allBtns.forEach(btn => {
+                    if (btn.getAttribute('data-correct') === 'true') {
+                        btn.classList.add('border-green-500', 'bg-green-50', 'text-green-900');
+                    }
+                });
+
                 setTimeout(() => {
-                    container.classList.remove('shake-anim');
-                    setTimeout(() => { loadRandomGame(); }, 1800);
-                }, 400);
+                    currentGameIndex++;
+                    loadRandomGame();
+                }, 1800);
             }
         }
+
+        function checkFillBlank(correctAnswer) {
+            const input = document.getElementById('fill-input');
+            const container = document.getElementById('game-container');
+            if(!input) return;
+
+            const userAnswer = input.value;
+
+            if (isAnswerCloseEnough(userAnswer, correctAnswer)) {
+                input.classList.remove('border-gray-300');
+                input.classList.add('success-glow', 'text-green-800');
+                setTimeout(() => { triggerVictory(); }, 900);
+            } else {
+                input.classList.remove('border-gray-300');
+                input.classList.add('error-shockwave', 'text-red-800');
+                input.value = `Correcte: ${correctAnswer}`;
+                
+                setTimeout(() => {
+                    currentGameIndex++;
+                    loadRandomGame();
+                }, 1900);
+            }
+        }
+
+        // --- DRAG & DROP DRAG MATCHING ---
 
         let dndMatches = 0;
         let totalDndPairs = 0;
@@ -303,24 +440,25 @@
             totalDndPairs = data.pairs.length;
             let terms = [...data.pairs].sort(() => Math.random() - 0.5);
             let meanings = [...data.pairs].sort(() => Math.random() - 0.5);
+
             let html = `
                 <div class="text-center mb-4 sm:mb-6">
-                    <span class="text-4xl sm:text-5xl mb-2 sm:mb-4 block">🧩</span>
-                    <h2 class="text-lg sm:text-xl cinzel font-bold text-gray-800">${data.question}</h2>
-                    <p class="text-xs sm:text-sm text-gray-600 mt-2 sm:mt-3 font-medium bg-blue-50 inline-block px-3 py-1 sm:px-4 sm:py-2 rounded-full border border-blue-200">Arrossega els conceptes de l'esquerra al seu significat correcte a la dreta.</p>
+                    <span class="inline-block px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded-full mb-2 uppercase tracking-wider">Relaciona Conceptes</span>
+                    <h2 class="text-lg sm:text-xl cinzel font-bold text-gray-900">${data.question}</h2>
+                    <p class="text-xs sm:text-sm text-blue-700 mt-2 font-semibold bg-blue-50/80 inline-block px-4 py-1.5 rounded-full border border-blue-200">Arrossega els conceptes de l'esquerra cap a la dreta</p>
                 </div>
-                <div class="flex flex-col md:flex-row gap-4 sm:gap-8 justify-between w-full">
-                    <div class="flex-1 space-y-2 sm:space-y-3" id="dnd-terms">
+                <div class="flex flex-col md:flex-row gap-4 sm:gap-6 justify-between w-full mt-4">
+                    <div class="flex-1 space-y-2.5" id="dnd-terms">
                         ${terms.map(t => `
-                            <div class="draggable p-2 sm:p-3 bg-blue-50 border-2 border-blue-200 text-blue-800 rounded-lg font-bold text-center shadow-sm text-sm sm:text-base" 
+                            <div class="draggable p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 text-blue-900 rounded-xl font-bold text-center shadow-sm text-sm sm:text-base hover:border-blue-400" 
                                  draggable="true" ondragstart="drag(event)" id="${t.id}">${t.term}</div>
                         `).join('')}
                     </div>
-                    <div class="flex-1 space-y-2 sm:space-y-3 mt-4 md:mt-0" id="dnd-meanings">
+                    <div class="flex-1 space-y-2.5 mt-2 md:mt-0" id="dnd-meanings">
                         ${meanings.map(m => `
-                            <div class="dropzone p-2 sm:p-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 min-h-[50px] flex items-center justify-center relative" 
+                            <div class="dropzone p-3 sm:p-4 bg-gray-50/80 border-2 border-dashed border-gray-300 rounded-xl text-gray-700 min-h-[58px] flex items-center justify-center relative font-medium text-xs sm:text-sm text-center" 
                                  ondrop="drop(event, '${m.id}')" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)">
-                                <span class="text-xs sm:text-sm z-0 pointer-events-none text-center">${m.meaning}</span>
+                                <span class="pointer-events-none z-0">${m.meaning}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -330,82 +468,87 @@
         }
 
         function allowDrop(ev) { ev.preventDefault(); }
-        function dragEnter(ev) {
-            ev.preventDefault();
-            if(ev.target.classList.contains('dropzone')) ev.target.classList.add('hover');
+        function dragEnter(ev) { ev.preventDefault(); if(ev.target.classList.contains('dropzone')) ev.target.classList.add('hover'); }
+        function dragLeave(ev) { if(ev.target.classList.contains('dropzone')) ev.target.classList.remove('hover'); }
+        
+        function drag(ev) { 
+            // MODIFICACIÓ CLAU: utilitzem text/plain, el qual és compatible amb iOS Safari i polyfill
+            ev.dataTransfer.setData("text/plain", ev.target.id); 
         }
-        function dragLeave(ev) {
-            if(ev.target.classList.contains('dropzone')) ev.target.classList.remove('hover');
-        }
-        function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
 
         function drop(ev, targetId) {
             ev.preventDefault();
             let dropzone = ev.target;
             if(!dropzone.classList.contains('dropzone')) dropzone = dropzone.closest('.dropzone');
             if(dropzone) dropzone.classList.remove('hover');
-            const draggedId = ev.dataTransfer.getData("text");
+            
+            // MODIFICACIÓ CLAU: agafar el text/plain
+            const draggedId = ev.dataTransfer.getData("text/plain");
             
             if (draggedId === targetId) {
                 const draggedElement = document.getElementById(draggedId);
                 dropzone.innerHTML = '';
-                dropzone.classList.remove('border-dashed', 'border-gray-300', 'bg-gray-50');
-                dropzone.classList.add('success-anim'); 
+                dropzone.classList.remove('border-dashed', 'border-gray-300', 'bg-gray-50/80');
+                dropzone.classList.add('success-glow'); 
+                
                 draggedElement.draggable = false;
-                draggedElement.classList.remove('cursor-grab', 'bg-blue-50', 'border-blue-200', 'text-blue-800');
-                draggedElement.classList.add('bg-transparent', 'border-none', 'text-green-900', 'w-full', 'text-sm', 'sm:text-lg');
+                draggedElement.classList.remove('draggable', 'bg-gradient-to-r', 'from-blue-50', 'to-indigo-50', 'border-2', 'border-blue-200', 'text-blue-900');
+                draggedElement.classList.add('bg-transparent', 'text-green-950', 'font-black', 'w-full', 'text-sm', 'sm:text-base');
+                
                 dropzone.appendChild(draggedElement);
-                dropzone.innerHTML += '<span class="absolute -right-2 -top-2 sm:-right-3 sm:-top-3 text-xl sm:text-2xl animate-bounce">✨</span>';
                 
                 dndMatches++;
                 if(dndMatches === totalDndPairs) {
-                    const container = document.getElementById('game-container');
-                    container.style.boxShadow = "0 0 50px rgba(34, 197, 94, 0.4)";
-                    setTimeout(() => { container.style.boxShadow = ""; triggerVictory(); }, 800);
+                    setTimeout(() => { triggerVictory(); }, 700);
                 }
             } else {
-                if(dropzone) {
-                    dropzone.classList.add('shake-anim');
-                    setTimeout(() => { dropzone.classList.remove('shake-anim'); }, 400);
+                if(dropzone) { 
+                    dropzone.classList.add('error-shockwave'); 
+                    setTimeout(() => { dropzone.classList.remove('error-shockwave'); }, 500); 
                 }
             }
         }
 
+        // --- VICTÒRIA I CONFETI PLATÒNIC ---
+
         function triggerVictory() {
             state.money += REWARD;
-            saveState();
+            saveState(); 
             document.getElementById('victory-screen').classList.add('active');
             createConfetti();
         }
 
-        function nextGame() { loadRandomGame(); }
+        function nextGame() { 
+            currentGameIndex++;
+            loadRandomGame(); 
+        }
 
         function createConfetti() {
-            const colors = ['#fde047', '#3b82f6', '#22c55e', '#ef4444'];
-            for(let i=0; i<30; i++) {
+            const colors = ['#fde047', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+            for(let i=0; i<35; i++) {
                 let conf = document.createElement('div');
-                conf.style.position = 'absolute';
-                conf.style.width = '10px';
-                conf.style.height = '10px';
+                conf.style.position = 'fixed';
+                conf.style.width = Math.random() * 8 + 6 + 'px';
+                conf.style.height = Math.random() * 8 + 6 + 'px';
                 conf.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
                 conf.style.left = '50%';
-                conf.style.top = '50%';
+                conf.style.top = '45%';
                 conf.style.borderRadius = '2px';
-                conf.style.zIndex = '100';
+                conf.style.zIndex = '1000';
                 conf.style.pointerEvents = 'none';
                 
                 let angle = Math.random() * Math.PI * 2;
-                let velocity = 50 + Math.random() * 100;
+                let velocity = 80 + Math.random() * 120;
                 let tx = Math.cos(angle) * velocity;
-                let ty = Math.sin(angle) * velocity - 50;
+                let ty = Math.sin(angle) * velocity - 60;
 
                 conf.animate([
-                    { transform: 'translate(0,0) scale(1)', opacity: 1 },
-                    { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 }
-                ], { duration: 1000 + Math.random()*500, easing: 'cubic-bezier(.17,.67,.83,.67)' });
+                    { transform: 'translate(0,0) rotate(0deg) scale(1)', opacity: 1 },
+                    { transform: `translate(${tx}px, ${ty}px) rotate(${Math.random()*360}deg) scale(0)`, opacity: 0 }
+                ], { duration: 1100 + Math.random()*600, easing: 'cubic-bezier(.1,1,.1,1)' });
 
                 document.body.appendChild(conf);
-                setTimeout(() => conf.remove(), 1500);
+                setTimeout(() => conf.remove(), 1700);
             }
         }
 
