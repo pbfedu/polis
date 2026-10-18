@@ -463,6 +463,13 @@
                         `).join('')}
                     </div>
                 </div>
+                
+                <!-- Botó per saltar la pregunta si el mòbil falla -->
+                <div class="text-center mt-6">
+                    <button onclick="skipQuestion()" class="text-xs sm:text-sm text-gray-400 hover:text-gray-700 underline decoration-dotted transition-colors">
+                        El teu mòbil no accepta arrossegar? Salta la pregunta ⏭️
+                    </button>
+                </div>
             `;
             container.innerHTML = html;
         }
@@ -507,6 +514,12 @@
                     setTimeout(() => { dropzone.classList.remove('error-shockwave'); }, 500); 
                 }
             }
+        }
+
+        // Fila per saltar la pregunta
+        function skipQuestion() {
+            currentGameIndex++;
+            loadRandomGame();
         }
 
         // --- VICTÒRIA I CONFETI PLATÒNIC ---
